@@ -1,0 +1,32 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Logs
+logs/*.log
+
+# Database
+db/milvus/*
+!db/milvus/.gitkeep
+
+# Video files
+video_samples/*
+!video_samples/.gitkeep
+video_samples_backup/*
+!video_samples_backup/.gitkeep
+
+# Model files - keep download.py but ignore other contents
+models/*
+!models/download.py
+!models/.gitkeep
+
+# Config files (optionally keep the default config)
+config/*
+!config/navit-config.yaml
+
+# macOS system files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
