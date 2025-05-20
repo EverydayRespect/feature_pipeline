@@ -41,47 +41,47 @@ The pipeline is configured using YAML files located in the `config/` directory. 
 
 Change the following configs when running pipeline:
 - video_input.path
-- gpus (according to server gpu type and number)
+- gpus (according to server gpu type and number, 'cuda:0', 'cuda:1' for example)
+- pipeline phases to add (each phase with model and database accordingly)
 
 Example configuration:
 ```yaml
-model:
-  name: "VL3-SigLIP-NaViT"
-  path: "models/VL3-SigLIP-NaViT"
-  source: "huggingface"
-  features: ["video_embedding"]
-
 video_input:
   path: "./video_samples/"
 
 gpus:
-  - cuda:0
-  - cuda:1
-  - cuda:2
+  - mps
 
-db:
-  type: "milvus"
-  name: "navit_video_feature.db"
-  batch_size: 1000
-  collections:
-    - name: "video_embedding_collection"
-      fields:
-        - name: id
-          dtype: INT64
-          is_primary: true
-          auto_id: true
-        - name: video_path
-          dtype: VARCHAR
-          max_length: 512
-        - name: frame_id
-          dtype: INT16
-        - name: row_idx
-          dtype: INT16
-        - name: col_idx
-          dtype: INT16
-        - name: embeddings
-          dtype: FLOAT_VECTOR
-          dim: 1152
+phases:
+  - model:
+      name: "VL3-SigLIP-NaViT"
+      path: "models/VL3-SigLIP-NaViT"
+      source: "folder"
+      features: ["video_embedding"]
+
+    db:
+      type: "milvus"
+      name: "navit_video_feature.db"
+      batch_size: 1000
+      collections:
+        - name: "video_embedding_collection"
+          fields:
+            - name: id
+              dtype: INT64
+              is_primary: true
+              auto_id: true
+            - name: video_path
+              dtype: VARCHAR
+              max_length: 512
+            - name: frame_id
+              dtype: INT16
+            - name: row_idx
+              dtype: INT16
+            - name: col_idx
+              dtype: INT16
+            - name: embeddings
+              dtype: FLOAT_VECTOR
+              dim: 1152
 ```
 
 ## Usage
@@ -97,12 +97,11 @@ python main.py --config_path config/navit-config.yaml
 feature_pipeline/
 ├── main.py              # Main entry point
 ├── worker.py            # GPU and DB worker implementations
-├── model.py             # Model implementations
 ├── database.py          # Database interface
 ├── utils.py             # Utility functions
 ├── logger.py            # Logging configuration
 ├── config/              # Configuration files
-├── models/              # Model checkpoints
+├── models/              # Model files and checkpoints
 ├── video_samples/       # Input videos
 ├── logs/                # Log files
 └── db/                  # Database files
