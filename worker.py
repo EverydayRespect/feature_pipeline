@@ -1,6 +1,6 @@
 from database import BaseVectorDB
 from logger import logger
-from model import load_model
+from models.utils import load_model
 
 def gpu_worker_thread(gpu_id, task_queue, result_queue, model_conf):
     

@@ -22,38 +22,39 @@ if __name__ == "__main__":
     video_paths = list_all_videos(conf["video_input"]["path"])
     logger.info(f"Found {len(video_paths)} videos.")
 
-    # Queues
-    task_queue = queue.Queue()
-    result_queue = queue.Queue()
+    for phase in conf["phases"]:
+        # Queues
+        task_queue = queue.Queue()
+        result_queue = queue.Queue()
 
-    # Enqueue all video paths
-    for path in video_paths:
-        task_queue.put(path)
+        # Enqueue all video paths
+        for path in video_paths:
+            task_queue.put(path)
 
-    # Initialize DB
-    db = init_db(conf["db"])
-    
-    # # Start DB writing thread
-    writer = threading.Thread(target=db_write_thread, args=(result_queue, db))
-    writer.start()
+        # Initialize DB
+        db = init_db(phase["db"])
+        
+        # # Start DB writing thread
+        writer = threading.Thread(target=db_write_thread, args=(result_queue, db))
+        writer.start()
 
-    # Start GPU worker threads
-    gpu_threads = []
-    for gpu_id in conf["gpus"]:
-        t = threading.Thread(target=gpu_worker_thread, args=(gpu_id, task_queue, result_queue, conf["model"]))
-        t.start()
-        gpu_threads.append(t)
+        # Start GPU worker threads
+        gpu_threads = []
+        for gpu_id in conf["gpus"]:
+            t = threading.Thread(target=gpu_worker_thread, args=(gpu_id, task_queue, result_queue, phase["model"]))
+            t.start()
+            gpu_threads.append(t)
 
-    # # Wait for all tasks to be processed
-    for t in gpu_threads:
-        t.join()
+        # # Wait for all tasks to be processed
+        for t in gpu_threads:
+            t.join()
 
-    # Wait for the video tasks to finish
-    task_queue.join()
+        # Wait for the video tasks to finish
+        task_queue.join()
 
-    # Wait for the DB writer to finish
-    result_queue.put(None)
-    result_queue.join()
-    writer.join()
+        # Wait for the DB writer to finish
+        result_queue.put(None)
+        result_queue.join()
+        writer.join()
 
     logger.success("✅ All tasks completed.")

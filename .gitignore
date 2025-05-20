@@ -17,7 +17,7 @@ video_samples_backup/*
 
 # Model files - keep download.py but ignore other contents
 models/*
-!models/download.py
+!models/*.py
 !models/.gitkeep
 
 # Config files (optionally keep the default config)
