@@ -32,11 +32,14 @@ if __name__ == "__main__":
             task_queue.put(path)
 
         # Initialize DB
-        db = init_db(phase["db"])
+        
         
         # # Start DB writing thread
-        writer = threading.Thread(target=db_write_thread, args=(result_queue, db))
-        writer.start()
+        writer_threads = []
+        for _ in range(conf["writers"]):
+            w = threading.Thread(target=db_write_thread, args=(result_queue, phase["db"]))
+            w.start()
+            writer_threads.append(w)
 
         # Start GPU worker threads
         gpu_threads = []
@@ -49,12 +52,10 @@ if __name__ == "__main__":
         for t in gpu_threads:
             t.join()
 
-        # Wait for the video tasks to finish
-        task_queue.join()
-
         # Wait for the DB writer to finish
-        result_queue.put(None)
-        result_queue.join()
-        writer.join()
+        for _ in range(conf["writers"]):
+            result_queue.put(None)
+        for w in writer_threads:
+            w.join()
 
     logger.success("✅ All tasks completed.")

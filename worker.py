@@ -1,4 +1,4 @@
-from database import BaseVectorDB
+from database import BaseVectorDB, init_db
 from logger import logger
 from models.utils import load_model
 
@@ -35,7 +35,8 @@ def gpu_worker_thread(gpu_id, task_queue, result_queue, model_conf):
 
     logger.info(f"[GPU-{gpu_id}] Worker exiting.")
 
-def db_write_thread(result_queue, db: BaseVectorDB):
+def db_write_thread(result_queue, db_config):
+    db = init_db(db_config)
     while True:
         try:
             data = result_queue.get()

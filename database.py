@@ -48,14 +48,17 @@ class MilvusVectorDB(BaseVectorDB):
     def __init__(self, db_config):
         super().__init__(db_config)
 
-        self.DB_BASE_ROOT = "./db/milvus"
+        # self.DB_BASE_ROOT = "./db/milvus"
 
-        self.db_path = os.path.join(self.DB_BASE_ROOT, self.db_name)
-        self.batch_size = db_config.get("self.batch_size", 1000)
+        # self.db_path = os.path.join(self.DB_BASE_ROOT, self.db_name)
+        self.host = db_config.get("host", "127.0.0.1")
+        self.port = db_config.get("port", "19530")
+        self.batch_size = db_config.get("batch_size", 1000)
+        self.uri = f"http://{self.host}:{self.port}"
         try:
-            self.client = MilvusClient(self.db_path)
+            self.client = MilvusClient(uri=self.uri)
         except:
-            raise ConnectionError(f"Failed to connect to Milvus database at {self.db_path}.")
+            raise ConnectionError(f"Failed to connect to Milvus database at {self.uri}.")
 
         self.collections = {}  # store collection to field mapping
 
@@ -86,12 +89,11 @@ class MilvusVectorDB(BaseVectorDB):
             schema = CollectionSchema(fields)
 
             if self.client.has_collection(collection_name):
-                logger.info(f"Collection '{collection_name}' already exists. Dropping and recreating.")
-                self.client.drop_collection(collection_name)
-
-            logger.info(f"Creating collection '{collection_name}'.")
-            self.client.create_collection(collection_name=collection_name, schema=schema)
-            logger.info(f"Collection '{collection_name}' created successfully.")
+                logger.info(f"Collection '{collection_name}' already exists.")
+            else:
+                logger.info(f"Creating collection '{collection_name}'.")
+                self.client.create_collection(collection_name=collection_name, schema=schema)
+                logger.info(f"Collection '{collection_name}' created successfully.")
 
     def insert(self, feature_name, video_path, feature_value):
         
@@ -116,7 +118,7 @@ class MilvusVectorDB(BaseVectorDB):
                 "frame_id": fid,
                 "row_idx": r,
                 "col_idx": c,
-                "embedding": embs[r * cols + c]
+                "embeddings": embs[r * cols + c]
             }
             for r in range(rows)
             for c in range(cols)

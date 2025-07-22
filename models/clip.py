@@ -46,6 +46,6 @@ class CLIPExtractor(BaseModel):
             return "video_embedding", {
                 "frame_id": [i for i in range(frame_count) for _ in range(patch_count)],
                 "patch_id": [j for _ in range(frame_count) for j in range(patch_count)],
-                "embedding": flattened,
+                "embeddings": flattened,
             }
 
