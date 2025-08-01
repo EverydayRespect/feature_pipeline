@@ -1,3 +1,5 @@
+import re
+import time
 import torch
 from logger import logger
 from transformers import AutoModel, AutoImageProcessor
@@ -12,9 +14,9 @@ class VL3SigLIPExtractor(BaseModel):
         self.model = AutoModel.from_pretrained(
             model_path,
             trust_remote_code=True,
-            device_map="auto",
+            device_map=device_id,
             torch_dtype=torch.bfloat16,
-            # attn_implementation="flash_attention_2",
+            attn_implementation="flash_attention_2"
         )
         self.processor = AutoImageProcessor.from_pretrained(model_path, trust_remote_code=True)
     
@@ -28,15 +30,17 @@ class VL3SigLIPExtractor(BaseModel):
                 merge_size=1,
                 return_tensors="pt",
             )
-            if "pixel_values" in image_input:
-                image_input["pixel_values"] = image_input["pixel_values"].to(self.device, dtype=torch.bfloat16)
-            else:
-                raise ValueError("pixel_values not found in image_input")
-            
+
             if "grid_sizes" in image_input:
                 _, grid_row, grid_col = image_input["grid_sizes"][0]
             else:
                 raise ValueError("grid_sizes not found in image_input")
+
+            image_input = {k: torch.tensor(v).cuda() for k, v in image_input.items()}
+            if "pixel_values" in image_input:
+                image_input["pixel_values"] = image_input["pixel_values"].to(torch.bfloat16)
+            else:
+                raise ValueError("pixel_values not found in image_input")
             
             embeddings = self.model(**image_input)
             # Move embeddings to CPU and detach from graph

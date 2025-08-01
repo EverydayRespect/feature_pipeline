@@ -1,6 +1,7 @@
 import argparse
 import queue
 import threading
+import time
 
 from config import read_config
 from database import init_db
@@ -12,7 +13,7 @@ if __name__ == "__main__":
 
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Feature extraction pipeline")
-    parser.add_argument("--config_path", type=str, default="config/navit-config.yaml", help="Path to the configuration file")
+    parser.add_argument("--config_path", type=str, default="config/sample-test.yaml", help="Path to the configuration file")
     args = parser.parse_args()
 
     config_path = args.config_path
@@ -31,22 +32,22 @@ if __name__ == "__main__":
         for path in video_paths:
             task_queue.put(path)
 
-        # Initialize DB
-        
-        
         # # Start DB writing thread
         writer_threads = []
+        db = init_db(phase["db"])
         for _ in range(conf["writers"]):
-            w = threading.Thread(target=db_write_thread, args=(result_queue, phase["db"]))
+            w = threading.Thread(target=db_write_thread, args=(result_queue, db))
             w.start()
             writer_threads.append(w)
 
         # Start GPU worker threads
         gpu_threads = []
         for gpu_id in conf["gpus"]:
-            t = threading.Thread(target=gpu_worker_thread, args=(gpu_id, task_queue, result_queue, phase["model"]))
-            t.start()
-            gpu_threads.append(t)
+            for _ in range(conf["threads_per_gpu"]):
+                time.sleep(5)
+                t = threading.Thread(target=gpu_worker_thread, args=(gpu_id, task_queue, result_queue, phase["model"]))
+                t.start()
+                gpu_threads.append(t)
 
         # # Wait for all tasks to be processed
         for t in gpu_threads:
@@ -57,5 +58,6 @@ if __name__ == "__main__":
             result_queue.put(None)
         for w in writer_threads:
             w.join()
+        db.close()
 
     logger.success("✅ All tasks completed.")

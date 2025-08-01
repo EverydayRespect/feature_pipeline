@@ -1,10 +1,15 @@
 video_input:
-  path: "./video_samples/"
+  path: "/mnt/synology/BWVs/1_1000"
+  # path: "./video_samples/"
 
 gpus:
-  - mps
+  - cuda:0
+  - cuda:1
+  - cuda:2
 
-writers: 3
+threads_per_gpu: 8
+
+writers: 8
 
 phases:
   - model:
@@ -15,7 +20,7 @@ phases:
 
     db:
       type: "milvus"
-      name: "navit_video_feature.db"
+      name: "navit_video_feature_first_batch_test.db"
       batch_size: 1000
       host: "127.0.0.1"
       port: "19530"

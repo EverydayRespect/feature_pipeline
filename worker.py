@@ -35,20 +35,18 @@ def gpu_worker_thread(gpu_id, task_queue, result_queue, model_conf):
 
     logger.info(f"[GPU-{gpu_id}] Worker exiting.")
 
-def db_write_thread(result_queue, db_config):
-    db = init_db(db_config)
+def db_write_thread(result_queue, db: BaseVectorDB):
     while True:
         try:
             data = result_queue.get()
             if data is None:
                 # Signal to exit
-                db.close()
                 result_queue.task_done()
                 break
 
-            logger.info(f"[DB Write Thread] Writing {data['video_path']}, {data["feature_name"]} to DB...")
-            db.insert(data["feature_name"], data["video_path"], data["feature_value"])
-            logger.info(f"[DB Write Thread] Successfully wrote {data['video_path']}, {data["feature_name"]} to DB.")
+            logger.info(f"[DB Write Thread] Writing {data['video_path']}, {data['feature_name']} to DB...")
+            db.insert(data['feature_name'], data['video_path'], data['feature_value'])
+            logger.info(f"[DB Write Thread] Successfully wrote {data['video_path']}, {data['feature_name']} to DB.")
             result_queue.task_done()
         except Exception as e:
             logger.error(f"[DB Write Thread] Error while inserting into DB: {e}")
