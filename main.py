@@ -47,7 +47,6 @@ if __name__ == "__main__":
             gpu_threads = []
             for gpu_id in conf["gpus"]:
                 for gpu_thread_id in range(conf["threads_per_gpu"]):
-                    time.sleep(5)
                     t = threading.Thread(target=gpu_worker_thread, args=(gpu_id, gpu_thread_id, task_queue, result_queue, phase["model"], stop_event))
                     t.start()
                     gpu_threads.append(t)

@@ -124,7 +124,8 @@ class MilvusVectorDB(BaseVectorDB):
             for c in range(cols)
         ]
 
-        for i in tqdm(range(0, len(records), self.batch_size), desc="Inserting patches", unit="batch"):
+        # for i in tqdm(range(0, len(records), self.batch_size), desc="Inserting patches", unit="batch"):
+        for i in range(0, len(records), self.batch_size):
             batch = records[i: i + self.batch_size]
             self.client.insert(collection_name, batch)
         

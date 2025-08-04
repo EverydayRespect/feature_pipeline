@@ -8,8 +8,8 @@ from models.base import BaseModel
 
 class CLIPExtractor(BaseModel):
 
-    def __init__(self, model_name, model_path, feature_list, device_id):
-        super().__init__(model_name, model_path, feature_list, device_id)
+    def __init__(self, model_name, model_path, feature_list, device):
+        super().__init__(model_name, model_path, feature_list, device)
         # Load the CLIP model here
         self.model = CLIPVisionModel.from_pretrained(
             model_path,

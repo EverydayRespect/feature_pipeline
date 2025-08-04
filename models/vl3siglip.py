@@ -9,22 +9,21 @@ from models.base import BaseModel
 
 class VL3SigLIPExtractor(BaseModel):
     
-    def __init__(self, model_name, model_path, feature_list, device_id, gpu_thread_id):
-        super().__init__(model_name, model_path, feature_list, device_id, gpu_thread_id)
+    def __init__(self, model_name, model_path, feature_list, device, gpu_thread_id):
+        super().__init__(model_name, model_path, feature_list, device, gpu_thread_id)
         self.model = AutoModel.from_pretrained(
             model_path,
             trust_remote_code=True,
             torch_dtype=torch.bfloat16,
             device_map=None,
             attn_implementation="flash_attention_2"
-        ).to(device_id)
+        ).to(device)
         self.processor = AutoImageProcessor.from_pretrained(model_path, trust_remote_code=True)
     
     @torch.inference_mode()
     def extract_embeddings(self, frames):
         
         for frame_id, frame in enumerate(frames):
-            logger.info(f"[GPU-{self.device}] Processing frame {frame_id}...")
             image_input = self.processor(
                 frame,
                 merge_size=1,
@@ -36,7 +35,7 @@ class VL3SigLIPExtractor(BaseModel):
             else:
                 raise ValueError("grid_sizes not found in image_input")
 
-            image_input = {k: torch.tensor(v).cuda() for k, v in image_input.items()}
+            image_input = {k: v.cuda(device=self.device) for k, v in image_input.items()}
             if "pixel_values" in image_input:
                 image_input["pixel_values"] = image_input["pixel_values"].to(torch.bfloat16)
             else:
@@ -48,6 +47,5 @@ class VL3SigLIPExtractor(BaseModel):
             # Free GPU memory
             del embeddings
 
-            logger.info(f"[GPU-{self.device}] Extracted {embeddings_cpu.shape} embeddings from frame {frame_id}.")
             yield frame_id, grid_row, grid_col, embeddings_cpu
  
