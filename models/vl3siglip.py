@@ -9,15 +9,15 @@ from models.base import BaseModel
 
 class VL3SigLIPExtractor(BaseModel):
     
-    def __init__(self, model_name, model_path, feature_list, device_id):
-        super().__init__(model_name, model_path, feature_list, device_id)
+    def __init__(self, model_name, model_path, feature_list, device_id, gpu_thread_id):
+        super().__init__(model_name, model_path, feature_list, device_id, gpu_thread_id)
         self.model = AutoModel.from_pretrained(
             model_path,
             trust_remote_code=True,
-            device_map=device_id,
             torch_dtype=torch.bfloat16,
+            device_map=None,
             attn_implementation="flash_attention_2"
-        )
+        ).to(device_id)
         self.processor = AutoImageProcessor.from_pretrained(model_path, trust_remote_code=True)
     
     @torch.inference_mode()

@@ -23,41 +23,68 @@ if __name__ == "__main__":
     video_paths = list_all_videos(conf["video_input"]["path"])
     logger.info(f"Found {len(video_paths)} videos.")
 
-    for phase in conf["phases"]:
-        # Queues
-        task_queue = queue.Queue()
-        result_queue = queue.Queue()
+    try:
+        for phase in conf["phases"]:
+            # Queues
+            task_queue = queue.Queue()
+            result_queue = queue.Queue()
 
-        # Enqueue all video paths
-        for path in video_paths:
-            task_queue.put(path)
+            # Enqueue all video paths
+            for path in video_paths:
+                task_queue.put(path)
 
-        # # Start DB writing thread
-        writer_threads = []
-        db = init_db(phase["db"])
-        for _ in range(conf["writers"]):
-            w = threading.Thread(target=db_write_thread, args=(result_queue, db))
-            w.start()
-            writer_threads.append(w)
+            stop_event = threading.Event()
 
-        # Start GPU worker threads
-        gpu_threads = []
-        for gpu_id in conf["gpus"]:
-            for _ in range(conf["threads_per_gpu"]):
-                time.sleep(5)
-                t = threading.Thread(target=gpu_worker_thread, args=(gpu_id, task_queue, result_queue, phase["model"]))
-                t.start()
-                gpu_threads.append(t)
+            # # Start DB writing thread
+            writer_threads = []
+            db = init_db(phase["db"])
+            for writer_thread_id in range(conf["writers"]):
+                w = threading.Thread(target=db_write_thread, args=(result_queue, writer_thread_id, db))
+                w.start()
+                writer_threads.append(w)
 
-        # # Wait for all tasks to be processed
+            # Start GPU worker threads
+            gpu_threads = []
+            for gpu_id in conf["gpus"]:
+                for gpu_thread_id in range(conf["threads_per_gpu"]):
+                    time.sleep(5)
+                    t = threading.Thread(target=gpu_worker_thread, args=(gpu_id, gpu_thread_id, task_queue, result_queue, phase["model"], stop_event))
+                    t.start()
+                    gpu_threads.append(t)
+
+            # # Wait for all tasks to be processed
+            for t in gpu_threads:
+                t.join()
+
+            # Wait for the DB writer to finish
+            for _ in range(conf["writers"]):
+                result_queue.put(None)
+            for w in writer_threads:
+                w.join()
+            db.close()
+
+    except KeyboardInterrupt:
+        logger.warning("⚠️ Ctrl+C received! Shutting down gracefully...")
+        stop_event.set()
+
+        # Clear the task queue
+        while not task_queue.empty():
+            try:
+                task_queue.get_nowait()
+            except queue.Empty:
+                break
+
+        # Wait for GPU threads
         for t in gpu_threads:
             t.join()
 
-        # Wait for the DB writer to finish
+        # Signal writers
         for _ in range(conf["writers"]):
             result_queue.put(None)
         for w in writer_threads:
             w.join()
+
         db.close()
+        logger.warning("Graceful shutdown complete.")
 
     logger.success("✅ All tasks completed.")
