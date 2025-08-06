@@ -48,4 +48,29 @@ class VL3SigLIPExtractor(BaseModel):
             del embeddings
 
             yield frame_id, grid_row, grid_col, embeddings_cpu
- 
+    
+    @torch.inference_mode()
+    def extract_embeddings_pooling(self, frames):
+        
+        all_embeddings = []
+        for _, frame in enumerate(frames):
+            image_input = self.processor(
+                frame,
+                merge_size=1,
+                return_tensors="pt",
+            )
+
+            image_input = {k: v.cuda(device=self.device) for k, v in image_input.items()}
+            if "pixel_values" in image_input:
+                image_input["pixel_values"] = image_input["pixel_values"].to(torch.bfloat16)
+            else:
+                raise ValueError("pixel_values not found in image_input")
+            
+            embeddings = self.model(**image_input)
+            # Move embeddings to CPU and detach from graph
+            frame_embedding = embeddings.mean(dim=0).detach().cpu()
+            # Free GPU memory
+            all_embeddings.append(frame_embedding)
+            del embeddings
+
+        return all_embeddings

@@ -13,6 +13,7 @@ class BaseModel:
 
         self.feature_func_map = {
             "video_embedding": self.extract_embeddings,
+            "video_embedding_pooling": self.extract_embeddings_pooling
         }
 
     def load_video(self, video_path):
@@ -26,6 +27,10 @@ class BaseModel:
     @abstractmethod
     def extract_embeddings(self, data):
         raise NotImplementedError("extract_embeddings should be overridden by subclasses")
+    
+    @abstractmethod
+    def extract_embeddings_pooling(self, data):
+        raise NotImplementedError("extract_embeddings_pooling should be overridden by subclasses")
 
     def extract_features(self, video_path):
         video_data = self.load_video(video_path)
@@ -38,3 +43,9 @@ class BaseModel:
                     "grid_cols": grid_cols,
                     "embeddings": embeddings.tolist()
                 }
+        if "video_embedding_pooling" in self.feature_list:
+            logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Extracting video pooling embeddings from {video_path}...")
+            frame_embeddings = self.extract_embeddings_pooling(video_data)
+            yield "video_embedding_pooling", {
+                "frame_embeddings": frame_embeddings
+            }

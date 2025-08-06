@@ -9,7 +9,7 @@ model_load_lock = threading.Lock()
 
 model_map = {
     "CLIP": CLIPExtractor,
-    "VL3-SigLIP-NaViT": VL3SigLIPExtractor,
+    "VL3-SigLIP-NaViT": VL3SigLIPExtractor
 }
 
 def load_model(gpu_id, gpu_thread_id, model_conf) -> BaseModel:

@@ -105,6 +105,9 @@ class MilvusVectorDB(BaseVectorDB):
         if feature_name == "video_embedding":
             self.insert_video_embedding(collection_name, video_path, feature_value)
 
+        if feature_name == "video_embedding_pooling":
+            self.insert_video_embedding_pooling(collection_name, video_path, feature_value)
+
     def insert_video_embedding(self, collection_name, video_path, feature_value):
         # Feature_value is a dictionary with keys "frame_id", "grid_rows", "grid_cols", and "embeddings"
         fid = feature_value["frame_id"]
@@ -128,6 +131,23 @@ class MilvusVectorDB(BaseVectorDB):
         for i in range(0, len(records), self.batch_size):
             batch = records[i: i + self.batch_size]
             self.client.insert(collection_name, batch)
+
+    def insert_video_embedding_pooling(self, collection_name, video_path, feature_value):
+        # Feature_value is a dictionary with keys "frame_id", "grid_rows", "grid_cols", and "embeddings"
+        frame_num = len(feature_value["frame_embeddings"]) 
+        embs = feature_value["frame_embeddings"]
+
+        records = [
+            {
+                "video_path": video_path,
+                "frame_id": f,
+                "frame_embeddings": embs[f]
+            }
+            for f in range(frame_num)
+        ]
+
+        # for i in tqdm(range(0, len(records), self.batch_size), desc="Inserting patches", unit="batch"):
+        self.client.insert(collection_name, records)
         
     def read(self, feature_name):
 

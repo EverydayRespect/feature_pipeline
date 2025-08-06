@@ -27,7 +27,7 @@ if __name__ == "__main__":
         for phase in conf["phases"]:
             # Queues
             task_queue = queue.Queue()
-            result_queue = queue.Queue()
+            result_queue = queue.Queue(maxsize=96)
 
             # Enqueue all video paths
             for path in video_paths:
