@@ -44,6 +44,7 @@ class VL3SigLIPExtractor(BaseModel):
             embeddings = self.model(**image_input)
             # Move embeddings to CPU and detach from graph
             embeddings_cpu = embeddings.detach().cpu()
+            logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] extracted one frame embedding...")
             # Free GPU memory
             del embeddings
 
@@ -72,5 +73,5 @@ class VL3SigLIPExtractor(BaseModel):
             # Free GPU memory
             all_embeddings.append(frame_embedding)
             del embeddings
-
+            
         return all_embeddings

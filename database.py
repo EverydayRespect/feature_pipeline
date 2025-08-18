@@ -2,7 +2,8 @@ import os
 from abc import abstractmethod
 from logger import logger
 from pymilvus import MilvusClient, FieldSchema, CollectionSchema, DataType
-from tqdm import tqdm
+import time
+import numpy as np
 
 class BaseVectorDB:
     def __init__(self, db_config):
@@ -53,7 +54,7 @@ class MilvusVectorDB(BaseVectorDB):
         # self.db_path = os.path.join(self.DB_BASE_ROOT, self.db_name)
         self.host = db_config.get("host", "127.0.0.1")
         self.port = db_config.get("port", "19530")
-        self.batch_size = db_config.get("batch_size", 1000)
+        self.batch_size = db_config.get("batch_size", 5000)
         self.uri = f"http://{self.host}:{self.port}"
         try:
             self.client = MilvusClient(uri=self.uri)
@@ -179,3 +180,55 @@ def init_db(db_config):
     db_class = db_map[db_type]
     db_instance = db_class(db_config)
     return db_instance
+
+if __name__ == "__main__":
+    # Example DB config
+    db_config = {
+        "type": "milvus",
+        "name": "testdb",
+        "host": "127.0.0.1",
+        "port": "19530",
+        "batch_size": 1000,
+        "collections": [
+            {
+                "name": "test_inserting_speed_collection",
+                "fields": [
+                    {"name": "id", "dtype": "INT64", "is_primary": "true", "auto_id": "true"},
+                    {"name": "video_path", "dtype": "VARCHAR", "max_length": 200},
+                    {"name": "frame_id", "dtype": "INT32"},
+                    {"name": "row_idx", "dtype": "INT32"},
+                    {"name": "col_idx", "dtype": "INT32"},
+                    {"name": "embeddings", "dtype": "FLOAT_VECTOR", "dim": 1024}
+                ]
+            }
+        ]
+    }
+
+    # Initialize DB
+    db = init_db(db_config)
+
+    def generate_fake_feature(frame_id, rows, cols, dim=1024):
+        """Generate synthetic embedding features for testing"""
+        embeddings = [np.random.rand(dim).astype("float32").tolist() for _ in range(rows * cols)]
+        return {
+            "frame_id": frame_id,
+            "grid_rows": rows,
+            "grid_cols": cols,
+            "embeddings": embeddings
+        }
+
+    def benchmark_inserts(num_frames=1000, rows=51, cols=91, dim=1024):
+        start_time = time.time()
+        
+        for fid in range(num_frames):
+            feature_value = generate_fake_feature(fid, rows, cols, dim)
+            db.insert_video_embedding("test_inserting_speed_collection", f"video_{fid}.mp4", feature_value)
+            elapsed = time.time() - start_time
+            print(f"Inserted {fid+1} frames, elapsed {elapsed:.2f}s, avg { (fid+1)/elapsed:.2f} frames/sec")
+
+        total_time = time.time() - start_time
+        print(f"\n✅ Done. Inserted {num_frames} frames in {total_time:.2f}s "
+            f"({num_frames/total_time:.2f} frames/sec).")
+
+    benchmark_inserts(num_frames=1000)
+    db.close()

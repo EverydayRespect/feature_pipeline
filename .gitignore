@@ -20,10 +20,6 @@ models/*
 !models/*.py
 !models/.gitkeep
 
-# Config files (optionally keep the default config)
-config/*
-!config/navit-config.yaml
-
 # macOS system files
 .DS_Store
 

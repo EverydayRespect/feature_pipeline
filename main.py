@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Feature extraction pipeline")
-    parser.add_argument("--config_path", type=str, default="config/sample-test.yaml", help="Path to the configuration file")
+    parser.add_argument("--config_path", type=str, default="config/sample-pooling-test.yaml", help="Path to the configuration file")
     args = parser.parse_args()
 
     config_path = args.config_path

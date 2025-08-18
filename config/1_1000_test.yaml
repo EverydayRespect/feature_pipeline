@@ -1,0 +1,39 @@
+video_input:
+  path: "/mnt/synology/BWVs/1_1000"
+  # path: "./video_samples/"
+
+gpus:
+  - cuda:0
+
+threads_per_gpu: 2
+
+writers: 1
+
+phases:
+  - model:
+      name: "VL3-SigLIP-NaViT"
+      path: "models/VL3-SigLIP-NaViT"
+      source: "folder"
+      features: ["video_embedding"]
+
+    db:
+      type: "milvus"
+      name: "navit_video_1_1000_frame_pooling.db"
+      batch_size: 5000
+      host: "127.0.0.1"
+      port: "19530"
+      collections:
+        - name: "video_embedding_collection"
+          fields:
+            - name: id
+              dtype: INT64
+              is_primary: true
+              auto_id: true
+            - name: video_path
+              dtype: VARCHAR
+              max_length: 512
+            - name: frame_id
+              dtype: INT16
+            - name: frame_embeddings
+              dtype: FLOAT_VECTOR
+              dim: 1152
