@@ -29,3 +29,6 @@ models/*
 
 # environment
 pipeline/
+
+# data
+buffer/

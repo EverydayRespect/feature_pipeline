@@ -2,8 +2,30 @@ import queue
 from database import BaseVectorDB, init_db
 from logger import logger
 from models.utils import load_model
+from file_writer import ParquetShardWriter
 
-def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, result_queue, model_conf, stop_event):
+def build_frame_records(video_path: str, feature_name: str, feature_value: dict):
+    """
+    将一帧的 embedding 打成一条记录：
+    - embeddings: 形状可为 (rows*cols, dim) 或 (rows, cols, dim) 或 (dim,)。最终统一为 (num_patches, dim)
+    - 主键：frame_id（配合 video_path 保证唯一）
+    """
+    fid  = feature_value["frame_id"]
+    rows = feature_value["grid_rows"]
+    cols = feature_value["grid_cols"]
+    embs = feature_value["embeddings"]  # 可能是 [rows*cols, dim] 或 [rows, cols, dim] 或 [dim]
+
+    rec = {
+        "video_path": video_path,
+        "feature_name": feature_name,
+        "frame_id": fid,          # 你之前备注：作主键
+        "grid_rows": rows,
+        "grid_cols": cols,
+        "embeddings": embs,       # 整帧的 2D（或3D/1D，写入时会统一成 2D）
+    }
+    return [rec]                  # 保持和 writer.enqueue 的批接口一致：list[dict]
+
+def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, writer: ParquetShardWriter, model_conf, stop_event):
     
     try:
         extractor = load_model(gpu_id, gpu_thread_id, model_conf)
@@ -23,11 +45,8 @@ def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, result_queue, model_con
 
         try:
             for feature_name, feature_value in extractor.extract_features(video_path):
-                result_queue.put({
-                    "video_path": video_path,
-                    "feature_name": feature_name,
-                    "feature_value": feature_value,
-                })
+                records = build_frame_records(video_path, feature_name, feature_value)
+                writer.enqueue(records)
         except Exception as e:
             logger.error(f"[GPU-{gpu_id}-Thread-{gpu_thread_id}] Error processing {video_path}: {e}")
         finally:

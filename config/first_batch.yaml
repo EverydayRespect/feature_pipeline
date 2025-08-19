@@ -1,0 +1,22 @@
+video_input:
+  batch: first_10_videos
+  path: "/mnt/synology/BWVs/first_10_videos"
+
+gpus:
+  - cuda:0
+groups: 4
+threads_per_gpu: 4
+
+writer:
+  shard_rows: 20000
+  max_queue: 5000
+  compression: zstd
+  embedding_dtype: float32
+  flush_interval_s: 60.0
+
+phases:
+  - model:
+      name: "VL3-SigLIP-NaViT"
+      path: "models/VL3-SigLIP-NaViT"
+      source: "folder"
+      features: ["video_embedding"]
