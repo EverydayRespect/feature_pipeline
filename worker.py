@@ -1,4 +1,5 @@
 import queue
+import time
 from database import BaseVectorDB, init_db
 from logger import logger
 from models.utils import load_model
@@ -13,20 +14,21 @@ def build_frame_records(video_path: str, feature_name: str, feature_value: dict)
     fid  = feature_value["frame_id"]
     rows = feature_value["grid_rows"]
     cols = feature_value["grid_cols"]
-    embs = feature_value["embeddings"]  # 可能是 [rows*cols, dim] 或 [rows, cols, dim] 或 [dim]
+    embs = feature_value["embeddings"]  
 
     rec = {
         "video_path": video_path,
         "feature_name": feature_name,
-        "frame_id": fid,          # 你之前备注：作主键
+        "frame_id": fid,          
         "grid_rows": rows,
         "grid_cols": cols,
-        "embeddings": embs,       # 整帧的 2D（或3D/1D，写入时会统一成 2D）
+        "embeddings": embs,       
     }
-    return [rec]                  # 保持和 writer.enqueue 的批接口一致：list[dict]
+    return [rec]                  
 
 def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, writer: ParquetShardWriter, model_conf, stop_event):
     
+    # Load model onto device
     try:
         extractor = load_model(gpu_id, gpu_thread_id, model_conf)
     except Exception as e:
@@ -35,6 +37,7 @@ def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, writer: ParquetShardWri
         return 
     
     while not stop_event.is_set():
+        # Get next video to process
         try:
             video_path = task_queue.get(timeout=2)
         except queue.Empty:
@@ -44,6 +47,7 @@ def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, writer: ParquetShardWri
         logger.info(f"[GPU-{gpu_id}-Thread-{gpu_thread_id}] Start processing {video_path}...")
 
         try:
+            # Get features and enqueue to writer
             for feature_name, feature_value in extractor.extract_features(video_path):
                 records = build_frame_records(video_path, feature_name, feature_value)
                 writer.enqueue(records)

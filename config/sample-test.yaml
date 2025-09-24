@@ -1,5 +1,5 @@
 video_input:
-  path: "/home/wuchenha/Desktop/feature_pipeline/video_samples"
+  path: "./video_samples"
 
 gpus:
   - cuda:0

@@ -6,6 +6,7 @@ from typing import Dict, List, Any
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+from logger import logger
 
 SENTINEL = object()
 
@@ -126,6 +127,7 @@ class ParquetShardWriter:
         return arr2d, int(arr2d.shape[1])
 
     def _flush_now(self):
+        logger.info(f"[Writer-G{self.group_id}-GPU{self.gpu_id}-T{self.worker_id}] Flushing {len(self._buf)} rows to parquet...")
         rows = self._buf
         self._buf = []
 
@@ -181,3 +183,4 @@ class ParquetShardWriter:
             write_statistics=True
         )
         os.replace(tmp, tmp[:-4])  # 原子替换成 .parquet
+        logger.info(f"[Writer-G{self.group_id}-GPU{self.gpu_id}-T{self.worker_id}] Wrote shard {tmp[:-4]} with {len(rows)} rows.")

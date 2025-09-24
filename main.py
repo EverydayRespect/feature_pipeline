@@ -46,7 +46,7 @@ def launch_workers_for_phase(conf, phase, video_paths):
     for gpu_id, device in enumerate(gpus):
         for gpu_thread_id in range(threads_per_gpu):
             group_id = (gpu_id * threads_per_gpu + gpu_thread_id) % groups
-            group_root = os.path.join(buffer_root, conf.get("video_input").get("batch"), "group"+str(group_id))
+            group_root = os.path.join(buffer_root, "group"+str(group_id))
             os.makedirs(group_root, exist_ok=True)
 
             writer = ParquetShardWriter(
