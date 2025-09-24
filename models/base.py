@@ -47,7 +47,7 @@ class BaseModel:
                     "frame_id": frame_id,
                     "grid_rows": grid_rows,
                     "grid_cols": grid_cols,
-                    "embeddings": embeddings.tolist()
+                    "embeddings": embeddings
                 }
             t3 = time.time()
             logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Finished extract_embeddings in {t3 - t2:.2f} sec")

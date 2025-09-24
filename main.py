@@ -1,105 +1,76 @@
 import argparse
-import queue
+import multiprocessing as mp
 import threading
-import time
 import os
 
 from config import read_config
 from logger import logger
 from utils import list_all_videos
-# Make sure gpu_worker_thread signature is: (gpu_id, gpu_thread_id, task_queue, writer, model_conf, stop_event)
 from worker import gpu_worker_thread
-from file_writer import ParquetShardWriter  # the per-worker parquet shard writer we discussed
+from file_writer_arrow import ArrowWriterProcess   # 👈 new writer process
 
 def launch_workers_for_phase(conf, phase, video_paths):
     """
-    Launch task queue, per-worker writers, and GPU worker threads for one phase.
-    Returns (task_queue, writers_dict, gpu_threads, stop_event)
+    Launch the task queue, a single writer process, and GPU worker threads.
+    Returns (task_queue, gpu_threads, writer_proc, data_queue, stop_event)
     """
-    # Queues
-    task_queue = queue.Queue()
-
-    # Enqueue tasks
+    # Task queue (video paths to process)
+    task_queue = mp.Queue()
     for p in video_paths:
         task_queue.put(p)
 
-    stop_event = threading.Event()
+    # Data queue (GPU results → writer process)
+    data_queue = mp.Queue(maxsize=10000)
 
-    # Writer settings (with sensible defaults)
+    stop_event = mp.Event()
+
+    # Start the writer process
     buffer_root = conf.get("buffer_root", "./buffer")
-    groups      = int(conf.get("groups", 1))
-    writer_cfg  = conf.get("writer", {})
-    shard_rows        = int(writer_cfg.get("shard_rows", 20_000))
-    max_queue         = int(writer_cfg.get("max_queue", 5_000))
-    compression       = writer_cfg.get("compression", "zstd")
-    embedding_dtype   = writer_cfg.get("embedding_dtype", "float32")
-    flush_interval_s  = float(writer_cfg.get("flush_interval_s", 60.0))
-
     os.makedirs(buffer_root, exist_ok=True)
+    writer_proc = mp.Process(
+        target=ArrowWriterProcess,
+        args=(buffer_root, data_queue, stop_event),
+        daemon=True,
+    )
+    writer_proc.start()
 
-    # Create per-worker writers and GPU worker threads
-    writers = {}
+    # Start GPU worker threads
     gpu_threads = []
     gpus = conf["gpus"]
     threads_per_gpu = int(conf["threads_per_gpu"])
-
     for gpu_id, device in enumerate(gpus):
         for gpu_thread_id in range(threads_per_gpu):
-            group_id = (gpu_id * threads_per_gpu + gpu_thread_id) % groups
-            group_root = os.path.join(buffer_root, "group"+str(group_id))
-            os.makedirs(group_root, exist_ok=True)
-
-            writer = ParquetShardWriter(
-                root_dir=group_root,
-                group_id=group_id,
-                gpu_id=gpu_id,
-                worker_id=gpu_thread_id,
-                shard_rows=shard_rows,
-                max_queue=max_queue,
-                compression=compression,
-                embedding_dtype=embedding_dtype,
-                flush_interval_s=flush_interval_s,
-            )
-            writers[(gpu_id, gpu_thread_id)] = writer
-
             t = threading.Thread(
                 target=gpu_worker_thread,
-                args=(device, gpu_thread_id, task_queue, writer, phase["model"], stop_event),
+                args=(device, gpu_thread_id, task_queue, data_queue, phase["model"], stop_event),
                 name=f"{device}-t{gpu_thread_id}",
                 daemon=True,
             )
             t.start()
             gpu_threads.append(t)
 
-    return task_queue, writers, gpu_threads, stop_event
+    return task_queue, gpu_threads, writer_proc, data_queue, stop_event
 
 
-def shutdown_workers(task_queue, writers, gpu_threads, stop_event, reason="normal"):
+def shutdown_workers(task_queue, gpu_threads, writer_proc, data_queue, stop_event, reason="normal"):
     """
-    Gracefully stop workers and flush/close writers.
+    Gracefully stop GPU workers and the writer process.
     """
     logger.info(f"Shutting down ({reason})…")
 
-    # Stop GPU worker loops
+    # Stop GPU workers
     stop_event.set()
-
-    # Drain task queue (so workers can exit quickly)
     while not task_queue.empty():
         try:
             task_queue.get_nowait()
-        except queue.Empty:
+        except Exception:
             break
-
-    # Join GPU worker threads
     for t in gpu_threads:
         t.join()
 
-    # Close writers (flush remaining buffers and stop writer threads)
-    for w in writers.values():
-        try:
-            w.close()
-        except Exception as e:
-            logger.error(f"Writer close error: {e}")
+    # Stop the writer process
+    data_queue.put(None)   # termination signal
+    writer_proc.join()
 
     logger.success("Shutdown complete.")
 
@@ -117,23 +88,22 @@ if __name__ == "__main__":
     try:
         for phase in conf["phases"]:
             logger.info(f"Starting phase: {phase.get('name', '<unnamed>')}")
-            task_queue, writers, gpu_threads, stop_event = launch_workers_for_phase(conf, phase, video_paths)
+            task_queue, gpu_threads, writer_proc, data_queue, stop_event = launch_workers_for_phase(conf, phase, video_paths)
 
-            # Wait for all GPU workers to finish this phase
+            # Wait for GPU workers to finish
             for t in gpu_threads:
                 t.join()
 
-            # Close writers after workers finish
-            shutdown_workers(task_queue, writers, gpu_threads, stop_event, reason="phase complete")
+            # Shut everything down
+            shutdown_workers(task_queue, gpu_threads, writer_proc, data_queue, stop_event, reason="phase complete")
 
         logger.success("✅ All tasks completed.")
 
     except KeyboardInterrupt:
-        # Best-effort graceful shutdown for the current phase
+        # Best-effort graceful shutdown
         logger.warning("⚠️ Ctrl+C received! Shutting down gracefully…")
         try:
-            shutdown_workers(task_queue, writers, gpu_threads, stop_event, reason="KeyboardInterrupt")
+            shutdown_workers(task_queue, gpu_threads, writer_proc, data_queue, stop_event, reason="KeyboardInterrupt")
         except Exception:
-            # If we were interrupted before these are defined (e.g. early Ctrl+C)
             pass
         logger.warning("Graceful shutdown complete.")

@@ -2,7 +2,6 @@ import torch
 import time
 from transformers import AutoModel, AutoImageProcessor
 from transformers.image_utils import load_image
-from PIL import Image
 
 model_name = "../../models/VL3-SigLIP-NaViT"
 image_url = "https://github.com/DAMO-NLP-SG/VideoLLaMA3/blob/main/assets/sora.png?raw=true"
@@ -22,40 +21,42 @@ def load_model(use_flash_attn):
     return model
 
 def run_inference(model, processor, image_tensor, num_runs=NUM_RUNS):
-    inputs = processor(images=image_tensor, merge_size=1)
-    inputs = {k: torch.tensor(v).to(device) for k, v in inputs.items()}
-    if "pixel_values" in inputs:
-        inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
+    preprocess_times = []
+    forward_times = []
 
-    times = []
     with torch.no_grad():
         for i in range(num_runs):
+            # -------- Preprocess --------
+            t0 = time.time()
+            inputs = processor(images=image_tensor, merge_size=1)
+            inputs = {k: torch.tensor(v).to(device) for k, v in inputs.items()}
+            if "pixel_values" in inputs:
+                inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
+            t1 = time.time()
+            preprocess_times.append(t1 - t0)
+
+            # -------- Forward --------
             torch.cuda.synchronize()
             start = time.time()
             _ = model(**inputs)
             torch.cuda.synchronize()
-            duration = time.time() - start
-            times.append(duration)
+            forward_times.append(time.time() - start)
 
-    avg_time = sum(times) / len(times)
-    return avg_time
+    avg_preprocess = sum(preprocess_times) / len(preprocess_times)
+    avg_forward = sum(forward_times) / len(forward_times)
+
+    return avg_preprocess, avg_forward
 
 def main():
     print("📥 Loading image...")
     image_tensor = load_image(image_url)
     processor = AutoImageProcessor.from_pretrained(model_name, trust_remote_code=True)
 
-    # Inference WITHOUT FlashAttention
-    # model1 = load_model(use_flash_attn=False)
-    # time1 = run_inference(model1, processor, image_tensor)
-    # print(f"❌ Avg inference without FlashAttention over {NUM_RUNS} runs: {time1:.2f} sec")
-    # del model1
-    # torch.cuda.empty_cache()
-
     # Inference WITH FlashAttention
-    model2 = load_model(use_flash_attn=True)
-    time2 = run_inference(model2, processor, image_tensor)
-    print(f"✅ Avg inference with FlashAttention2 over {NUM_RUNS} runs: {time2:.2f} sec")
+    model = load_model(use_flash_attn=True)
+    avg_pre, avg_fwd = run_inference(model, processor, image_tensor)
+    print(f"✅ Avg preprocess time over {NUM_RUNS} runs: {avg_pre:.3f} sec")
+    print(f"✅ Avg forward time over {NUM_RUNS} runs: {avg_fwd:.3f} sec")
 
 if __name__ == "__main__":
     main()
