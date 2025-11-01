@@ -7,6 +7,10 @@ from PIL import Image
 from io import BytesIO
 import time
 
+import soundfile as sf 
+import librosa
+from lhotse import Recording, CutSet
+
 MAX_FRAMES = 768
 
 def list_all_videos(input_paths, exts=(".mp4", ".avi", ".mov", ".mkv")):
@@ -28,6 +32,49 @@ def list_all_videos(input_paths, exts=(".mp4", ".avi", ".mov", ".mkv")):
                     full_path = os.path.join(root, file)
                     video_paths.append(full_path)
     return video_paths
+
+def load_audio(audio_path: str,
+               sampling_rate: int=16000,
+               backend: str="soundfile"):
+    """
+    Load an audio file and (optionally) resample it to a target sampling rate.
+
+    This function supports two backends for audio loading:
+    1. **soundfile** – Uses the `soundfile` library to read audio data and resamples
+       it with `librosa.resample` if the original sample rate differs from the target.
+    2. **cutset** – Uses a `CutSet` and `Recording` interface (from Lhotse) to load
+       and resample audio, returning both the waveform and its lengths.
+
+    Args:
+        audio_path (str): Path to the audio file to load.
+        sampling_rate (int, optional): Desired sampling rate in Hz. 
+            Defaults to 16000.
+        backend (str, optional): Audio loading backend to use.
+            Choices are `"soundfile"` or `"cutset"`. Defaults to `"soundfile"`.
+
+    Returns:
+        tuple:
+            - For `"soundfile"` backend:
+                (np.ndarray, int): The audio waveform and the (possibly resampled) sampling rate.
+            - For `"cutset"` backend:
+                (torch.Tensor, torch.Tensor, int): The audio tensor, 
+                corresponding audio lengths, and the sampling rate.
+
+    Example:
+        >>> audio, sr = load_audio("example.wav", sampling_rate=16000)
+        >>> audio.shape
+        (16000,)
+    """
+    if backend == "soundfile":
+        audio, audio_sampling_rate = sf.read(audio_path)
+        if sampling_rate != audio_sampling_rate:
+            # resample the audio to desired sampling_rate
+            audio = librosa.resample(audio.T, orig_sr=audio_sampling_rate, target_sr=sampling_rate).T
+        return audio, sampling_rate
+    elif backend == "cutset":
+        cuts = CutSet([Recording.from_file(audio_path).to_cut()])
+        audio, audio_lens = cuts.resample(sampling_rate).load_audio(collate=True)
+        return audio, audio_lens, sampling_rate
 
 def load_video(
     video_path: str,

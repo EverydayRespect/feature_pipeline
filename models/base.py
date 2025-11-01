@@ -14,7 +14,8 @@ class BaseModel:
 
         self.feature_func_map = {
             "video_embedding": self.extract_embeddings,
-            "video_embedding_pooling": self.extract_embeddings_pooling
+            "video_embedding_pooling": self.extract_embeddings_pooling,
+            "speech_mels_features": self.extract_mels
         }
 
     def load_video(self, video_path):
@@ -25,6 +26,10 @@ class BaseModel:
         
         return frames
     
+    @abstractmethod
+    def extract_mels(self, data):
+        raise NotImplementedError("extract_mels should be overwritten by sub classes")
+
     @abstractmethod
     def extract_embeddings(self, data):
         raise NotImplementedError("extract_embeddings should be overridden by subclasses")
