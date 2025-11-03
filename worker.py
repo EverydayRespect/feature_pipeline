@@ -31,27 +31,15 @@ def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, data_queue, model_conf,
         try:
             # Iterate over extracted features (frame embeddings)
             for feature_name, feature_value in extractor.extract_features(video_path):
-                fid  = feature_value["frame_id"]
-                rows = feature_value["grid_rows"]
-                cols = feature_value["grid_cols"]
-                embs = feature_value["embeddings"]
+                feature_value["type"] = feature_name
+                feature_value["video_path"] = video_path
 
-                # Ensure embeddings are on CPU and numpy
-                print(embs.shape)
-                if isinstance(embs, torch.Tensor):
-                    embs = embs.to(torch.float32).numpy()
+                if "embeddings" in feature_value:
+                    embs = feature_value["embeddings"]
+                    if isinstance(embs, torch.Tensor):
+                        feature_value["embeddings"] = embs.to(torch.float32).cpu().numpy()
 
-                record = {
-                    "type": feature_name,
-                    "video_path": video_path,
-                    "frame_id": fid,
-                    "grid_rows": rows,
-                    "grid_cols": cols,
-                    "embeddings": embs,
-                }
-
-                # Push record into writer queue
-                data_queue.put(record)
+                data_queue.put(feature_value)
                 
             data_queue.put({
                 "type": "video_done",

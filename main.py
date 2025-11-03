@@ -85,6 +85,13 @@ if __name__ == "__main__":
     video_paths = list_all_videos(conf["video_input"]["path"])
     logger.info(f"Found {len(video_paths)} videos.")
 
+    # Initialize worker-related variables so they are always defined if an exception occurs early
+    task_queue = None
+    gpu_threads = []
+    writer_proc = None
+    data_queue = None
+    stop_event = None
+
     try:
         for phase in conf["phases"]:
             logger.info(f"Starting phase: {phase.get('name', '<unnamed>')}")
@@ -102,8 +109,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         # Best-effort graceful shutdown
         logger.warning("⚠️ Ctrl+C received! Shutting down gracefully…")
-        try:
-            shutdown_workers(task_queue, gpu_threads, writer_proc, data_queue, stop_event, reason="KeyboardInterrupt")
-        except Exception:
-            pass
+        shutdown_workers(task_queue, gpu_threads, writer_proc, data_queue, stop_event, reason="KeyboardInterrupt")
         logger.warning("Graceful shutdown complete.")

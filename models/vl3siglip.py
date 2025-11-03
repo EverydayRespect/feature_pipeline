@@ -21,7 +21,6 @@ class VL3SigLIPExtractor(BaseModel):
         self.processor = AutoImageProcessor.from_pretrained(model_path, trust_remote_code=True)
     
     @torch.inference_mode()
- 
     def extract_embeddings(self, frames):
         for frame_id, frame in enumerate(frames):
             t0 = time.time()
@@ -57,7 +56,6 @@ class VL3SigLIPExtractor(BaseModel):
 
             yield frame_id, grid_row, grid_col, embeddings_cpu
 
-    
     @torch.inference_mode()
     def extract_embeddings_pooling(self, frames):
         

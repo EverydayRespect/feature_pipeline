@@ -1,0 +1,33 @@
+model:
+  name: "CLIP"
+  path: "models/clip/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
+  source: "huggingface"
+  features: ["video_embedding"]
+
+video_input:
+  path: "./video_samples/"
+
+gpus:
+  - mps
+
+db:
+  type: "milvus"
+  name: "clip_video_feature.db"
+  batch_size: 1000
+  collections:
+    - name: "video_embedding_collection"
+      fields:
+        - name: id
+          dtype: INT64
+          is_primary: true
+          auto_id: true
+        - name: video_path
+          dtype: VARCHAR
+          max_length: 512
+        - name: frame_id
+          dtype: INT64
+        - name: patch_id
+          dtype: INT64
+        - name: embedding
+          dtype: FLOAT_VECTOR
+          dim: 768

@@ -34,14 +34,10 @@ class BaseModel:
         raise NotImplementedError("extract_embeddings_pooling should be overridden by subclasses")
 
     def extract_features(self, video_path):
-        t0 = time.time()
         video_data = self.load_video(video_path)
-        t1 = time.time()
-        logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Loaded video in {t1 - t0:.2f} sec")
 
         if "video_embedding" in self.feature_list:
             logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Extracting video embeddings from {video_path}...")
-            t2 = time.time()
             for frame_id, grid_rows, grid_cols, embeddings in self.extract_embeddings(video_data):
                 yield "video_embedding", {
                     "frame_id": frame_id,
@@ -49,8 +45,6 @@ class BaseModel:
                     "grid_cols": grid_cols,
                     "embeddings": embeddings
                 }
-            t3 = time.time()
-            logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Finished extract_embeddings in {t3 - t2:.2f} sec")
             
         if "video_embedding_pooling" in self.feature_list:
             logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Extracting video pooling embeddings from {video_path}...")
