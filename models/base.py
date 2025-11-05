@@ -38,11 +38,8 @@ class BaseModel:
 
         if "video_embedding" in self.feature_list:
             logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Extracting video embeddings from {video_path}...")
-            for frame_id, grid_rows, grid_cols, embeddings in self.extract_embeddings(video_data):
+            for embeddings in self.extract_embeddings(video_data):
                 yield "video_embedding", {
-                    "frame_id": frame_id,
-                    "grid_rows": grid_rows,
-                    "grid_cols": grid_cols,
                     "embeddings": embeddings
                 }
             
