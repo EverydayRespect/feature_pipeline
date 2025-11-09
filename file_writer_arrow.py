@@ -66,7 +66,7 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
                 writers[key][1].write_table(table)
                 t1 = time.time()
                 logger.info(
-                    f"📝 Flushed {len(buffers[key])} frames for {vpath}/{feature_type} "
+                    f"📝 Flushed {len(buffers[key])} batches of frame for {vpath}/{feature_type} "
                     f"({num_patches}×{hidden_dim}) in {t1 - t0:.3f} sec"
                 )
                 buffers[key] = []
@@ -83,7 +83,7 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
                         writers[(vid, feat)][1].write_table(table)
                         t1 = time.time()
                         logger.info(
-                            f"📝 Final flush {len(arrs)} frames for {vpath}/{feat} in {t1 - t0:.3f} sec"
+                            f"📝 Final flush {len(arrs)} batches of frame for {vpath}/{feat} in {t1 - t0:.3f} sec"
                         )
                         buffers[(vid, feat)] = []
 

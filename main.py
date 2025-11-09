@@ -25,7 +25,7 @@ def launch_workers_for_phase(conf, phase, video_paths):
     stop_event = mp.Event()
 
     # Start the writer process
-    buffer_root = conf.get("buffer_root", "./buffer")
+    buffer_root = os.path.join(conf.get("buffer_root", "./buffer"), conf["video_input"].get("batch", "test"))
     os.makedirs(buffer_root, exist_ok=True)
     writer_proc = mp.Process(
         target=ArrowWriterProcess,
@@ -77,7 +77,7 @@ def shutdown_workers(task_queue, gpu_threads, writer_proc, data_queue, stop_even
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Feature extraction pipeline")
-    parser.add_argument("--config_path", type=str, default="config/sample-test.yaml",
+    parser.add_argument("--config_path", type=str, default="config/first_batch_pyarrow.yaml",
                         help="Path to the configuration file")
     args = parser.parse_args()
 
