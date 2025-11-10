@@ -1,9 +1,41 @@
 import os
+from pathlib import Path
 import time
 import pyarrow as pa
 import pyarrow.ipc as ipc
 from logger import logger
 import torch
+
+def getFilePath(video_path, root_dir, feature_type):
+    """
+    Generate the output file path for a given video and feature type.
+
+    规则：
+    - If the path contains 'BWVs', then the output path is:
+      root_dir / <first_subdir> / <file_name>.<feature_type>.arrow
+      e.g.
+      /mnt/.../BWVs/first_10_videos/session1/a.mp4
+      -> buffer/first_10_videos/a.embedding.arrow
+
+    - If the path doesn't contains 'BWVs', then:
+      root_dir / <file_bane>.<feature_type>.arrow
+    """
+    video_path = Path(video_path).resolve()
+    root_dir = Path(root_dir).resolve()
+    parts = video_path.parts
+
+    if "BWVs" in parts:
+        bwv_idx = parts.index("BWVs")
+        if bwv_idx + 1 >= len(parts):
+            raise ValueError(f"Path '{video_path}' has 'BWVs' but no subdirectory after it.")
+        first_subdir = parts[bwv_idx + 1]  # e.g. 'first_10_videos'
+        rel_path = Path(first_subdir) / video_path.name
+    else:
+        rel_path = Path(video_path.name)
+
+    out_path = root_dir / rel_path.with_suffix(f".{feature_type}.arrow")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    return out_path
 
 def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
     """
@@ -23,9 +55,11 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
         if item is None:  # shutdown signal
             break
 
+        vpath = item["video_path"]
+        feature_type = item["type"]  # e.g. "video_embedding"
+        key = (vpath, feature_type) # Unique key per video+feature
+
         if item["type"].endswith("_embedding"):
-            vpath = item["video_path"]
-            feature_type = item["type"]  # e.g. "video_embedding"
             embs = item["embeddings"]    # shape [num_patches, hidden_dim]
             num_patches, hidden_dim = embs.shape
 
@@ -39,13 +73,9 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
                 hidden_dim
             )
 
-            # Unique key per video+feature
-            key = (vpath, feature_type)
-
             # If first time writing this (video, feature) → open file
             if key not in writers:
-                fname = os.path.basename(vpath)
-                out_path = os.path.join(root_dir, f"{fname}.{feature_type}.arrow")
+                out_path = getFilePath(vpath, root_dir, feature_type)
                 sink = pa.OSFile(out_path, "wb")
                 schema = pa.schema([
                     (feature_type, pa.list_(pa.float16(), hidden_dim))

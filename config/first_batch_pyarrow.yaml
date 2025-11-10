@@ -1,6 +1,8 @@
 video_input:
   batch: first_10_videos
-  path: "/mnt/synology/BWVs/first_10_videos"
+  path: 
+    - "/mnt/synology/BWVs/first_10_videos"
+    - "/mnt/synology/BWVs/second_400_videos"
 
 gpus:
   - cuda:0

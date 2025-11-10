@@ -9,7 +9,7 @@ import time
 
 MAX_FRAMES = 768
 
-def list_all_videos(input_path, exts=(".mp4", ".avi", ".mov", ".mkv")):
+def list_all_videos(input_paths, exts=(".mp4", ".avi", ".mov", ".mkv")):
     """
     Recursively list all video files in a directory.
 
@@ -21,11 +21,12 @@ def list_all_videos(input_path, exts=(".mp4", ".avi", ".mov", ".mkv")):
         List[str]: List of full paths to video files.
     """
     video_paths = []
-    for root, dirs, files in os.walk(input_path):
-        for file in files:
-            if file.lower().endswith(exts):
-                full_path = os.path.join(root, file)
-                video_paths.append(full_path)
+    for input_path in input_paths:
+        for root, dirs, files in os.walk(input_path):
+            for file in files:
+                if file.lower().endswith(exts):
+                    full_path = os.path.join(root, file)
+                    video_paths.append(full_path)
     return video_paths
 
 def load_video(
