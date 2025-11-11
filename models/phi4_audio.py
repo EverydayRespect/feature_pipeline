@@ -1,5 +1,7 @@
 # Extracting mel-spectrograms for Phi-4 audio/speech related tasks
 import numpy as np
+import soundfile as sf
+import librosa 
 
 from logger import logger
 from models.base import BaseModel
@@ -108,7 +110,31 @@ class Phi4MelExtractor(BaseModel):
         log_fbank = np.log(fbank_power).astype(np.float32)
 
         if output == "mel_features":
-            return "speech_mels_features", {
+            return {
                 "mels": log_fbank,
                 "audio_shape": audio.shape
             }
+    
+    def load_audio(self, audio_path):
+        if audio_path.endswith(".wav"):
+            audio, sr = sf.read(audio_path)
+            if audio.ndim > 1:
+                audio = np.mean(audio, axis=1)
+        elif audio_path.endswith(".mp4"):
+            audio, sr = librosa.load(audio_path, sr=16000)
+        audio = audio.astype("float32")
+
+        if sr != 16000:
+            # resample the audio to desired 16kHz sampling rate
+            audio = librosa.resample(audio.T, orig_sr=sr, target_sr=16000).T
+        return audio
+
+    def extract_features(self, audio_path):
+        audio_data = self.load_audio(audio_path)
+
+        if "speech_mels_features" in self.feature_list:
+            mel_features = self.extract_mels(audio_data)
+            return "speech_mels_features", mel_features
+
+
+        
