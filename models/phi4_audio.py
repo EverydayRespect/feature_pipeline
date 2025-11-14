@@ -2,6 +2,7 @@
 import numpy as np
 import soundfile as sf
 import librosa 
+import os 
 
 from logger import logger
 from models.base import BaseModel
@@ -28,6 +29,7 @@ def speechlib_mel(sample_rate, n_fft, n_mels, fmin=None, fmax=None):
     if fmin is None:
         fmin = 0
     assert fmin >= 0, "fmin cannot be negtive"
+    print(f"fmin: {fmin} fmax: {fmax} sample_rate: {sample_rate}")
     assert fmin < fmax <= sample_rate / 2, "fmax must be between (fmin, samplerate / 2]"
 
     def mel(f):
@@ -67,6 +69,8 @@ class Phi4MelExtractor(BaseModel):
     def __init__(self, model_name: str=None, 
                  model_path: str=None, 
                  feature_list: list=[], 
+                 gpu_id: int=None,
+                 gpu_thread_id: int=None,
                  device: str="cpu",
                  sampling_rate: int=16000,
                  n_mels: int=80,
@@ -79,11 +83,11 @@ class Phi4MelExtractor(BaseModel):
         super().__init__(model_name, model_path, feature_list, device)
         
         self.mel_filters = speechlib_mel(
-            sampling_rate,
-            n_fft,
-            n_mels,
-            None,
-            7690
+            sample_rate=sampling_rate,
+            n_fft=n_fft,
+            n_mels=n_mels,
+            fmin=None,
+            fmax=7690
         ).T
         self.window = np.hamming(win_length)
         self.preemphasis = 0.97
@@ -121,7 +125,10 @@ class Phi4MelExtractor(BaseModel):
             if audio.ndim > 1:
                 audio = np.mean(audio, axis=1)
         elif audio_path.endswith(".mp4"):
-            audio, sr = librosa.load(audio_path, sr=16000)
+            audio_path_wav = audio_path.replace(".mp4", ".wav")
+            os.system(f"ffmpeg -i {audio_path} -ac 1 -ar 16000 {audio_path_wav}")
+            audio, sr = sf.read(audio_path_wav)
+            os.system(f"rm {audio_path_wav}")
         audio = audio.astype("float32")
 
         if sr != 16000:
@@ -134,7 +141,7 @@ class Phi4MelExtractor(BaseModel):
 
         if "speech_mels_features" in self.feature_list:
             mel_features = self.extract_mels(audio_data)
-            return "speech_mels_features", mel_features
+            return [("speech_mels_features", mel_features)]
 
 
         
