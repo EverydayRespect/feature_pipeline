@@ -1,0 +1,16 @@
+video_input:
+  batch: first_10_videos
+  path: 
+    - "/data2/akommine/CARE_workspace/data/examples/"
+
+gpus:
+  - cuda:2
+
+threads_per_gpu: 1
+
+phases:
+  - model:
+      name: "Phi-4-mel"
+      path: "models/VL3-SigLIP-NaViT"
+      source: "folder"
+      features: ["speech_mels_features"]

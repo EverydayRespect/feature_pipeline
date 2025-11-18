@@ -59,6 +59,47 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
         feature_type = item["type"]  # e.g. "video_embedding"
         key = (vpath, feature_type) # Unique key per video+feature
 
+        if item["type"] == "speech_mels_features":
+            mels = item["mels"]
+            audio_shape = item["audio_shape"]
+
+            # Convert to Arrow arrays
+            mels_arr = pa.array([mels.tolist()])
+            audio_shape_arr = pa.array([list(audio_shape)])
+
+            # If first time writing this (video, feature) → open file
+            if key not in writers:
+                out_path = getFilePath(vpath, root_dir, feature_type)
+                sink = pa.OSFile(str(out_path), "wb")
+
+                schema = pa.schema(
+                    [
+                        pa.field("mels", mels_arr.type),
+                        pa.field("audio_shape", audio_shape_arr.type),
+                    ]
+                )
+
+                writer = ipc.new_file(sink, schema)
+                writers[key] = (sink, writer)
+                hidden_dims[key] = audio_shape
+                logger.info(f"✍️ Opened writer for {vpath}/{feature_type} → {out_path}")
+
+            # Build a table with one row
+            table = pa.table(
+                {
+                    "mels": mels_arr,
+                    "audio_shape": audio_shape_arr,
+                }
+            )
+
+            # Write immediately — no batching
+            writers[key][1].write_table(table)
+
+            logger.info(
+                f"📝 Wrote speech mel spectrogram for {vpath}/{feature_type} "
+                f"(shape={mels.shape}, audio_shape={audio_shape})"
+            )
+
         if item["type"].endswith("_embedding"):
             embs = item["embeddings"]    # shape [num_patches, hidden_dim]
             num_patches, hidden_dim = embs.shape

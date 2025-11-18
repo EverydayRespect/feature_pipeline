@@ -3,13 +3,15 @@ from logger import logger
 from models.base import BaseModel
 from models.clip import CLIPExtractor
 from models.vl3siglip import VL3SigLIPExtractor
+from models.phi4_audio import Phi4MelExtractor
 
 # Global lock for thread-safe model loading
 model_load_lock = threading.Lock()
 
 model_map = {
     "CLIP": CLIPExtractor,
-    "VL3-SigLIP-NaViT": VL3SigLIPExtractor
+    "VL3-SigLIP-NaViT": VL3SigLIPExtractor,
+    "Phi-4-mel": Phi4MelExtractor
 }
 
 def load_model(gpu_id, gpu_thread_id, model_conf) -> BaseModel:
