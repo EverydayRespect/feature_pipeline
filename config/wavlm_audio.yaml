@@ -10,7 +10,7 @@ threads_per_gpu: 1
 phases:
   - model:
       name: "WavLM-Large"
-      path: "/data2/shihheng/feature_pipeline/WavLM-Large"
+      path: "models/WavLM-Large"
       source: "folder"
       features: ["speech_mels_features"]
     
