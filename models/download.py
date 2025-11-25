@@ -15,7 +15,7 @@ snapshot_download(
     local_dir_use_symlinks=False
 )
 
-wavlm_dir = "./WavLM-Large" 
+wavlm_dir = "models/WavLM-Large" 
 snapshot_download(
     repo_id="microsoft/wavlm-large",
     local_dir=wavlm_dir,
