@@ -3,15 +3,16 @@ from logger import logger
 from models.base import BaseModel
 from models.clip import CLIPExtractor
 from models.vl3siglip import VL3SigLIPExtractor
-from models.phi4_audio import Phi4MelExtractor
+from models.beats import BEATsExtractor
 from models.wavlm import WavLMExtractor
-
+from models.phi4_audio import Phi4MelExtractor
 # Global lock for thread-safe model loading
 model_load_lock = threading.Lock()
 
 model_map = {
     "CLIP": CLIPExtractor,
     "VL3-SigLIP-NaViT": VL3SigLIPExtractor,
+    "BEATs": BEATsExtractor,
     "Phi-4-mel": Phi4MelExtractor,
     "WavLM-Large": WavLMExtractor,
 }
