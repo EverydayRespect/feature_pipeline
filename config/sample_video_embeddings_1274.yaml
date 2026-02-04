@@ -1,13 +1,17 @@
 video_input:
-  path: "./video_samples"
+  batch: sample_embedding_batch
+  input_path: /home/wuchenha/Desktop/feature_pipeline/sampled_video_file_addresses.txt
 
 gpus:
   - cuda:0
+  - cuda:1
+  - cuda:2
 
 threads_per_gpu: 1
 
 phases:
   - model:
+      base_dir: "VideoLLaMa3_embeddings_714_1274_fps1"
       name: "VL3-SigLIP-NaViT"
       path: "models/VL3-SigLIP-NaViT"
       source: "folder"

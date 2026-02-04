@@ -1,18 +1,18 @@
 video_input:
-  batch: first_10_videos
-  path: 
-    - "/mnt/synology/BWVs/first_10_videos"
+  batch: sample_embedding_batch
+  input_path: /home/wuchenha/Desktop/feature_pipeline/sampled_video_file_addresses.txt
 
 gpus:
   - cuda:0
   - cuda:1
   - cuda:2
+  
 
 threads_per_gpu: 1
 
 phases:
   - model:
-      base_dir: "test"
+      base_dir: "VideoLLaMa3_embeddings_364_644_fps1"
       name: "VL3-SigLIP-NaViT"
       path: "models/VL3-SigLIP-NaViT"
       source: "folder"

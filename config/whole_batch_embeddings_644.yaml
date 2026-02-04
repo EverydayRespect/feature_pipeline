@@ -1,0 +1,26 @@
+video_input:
+  batch: whole_videos
+  path: 
+    - "/mnt/synology/BWVs/fourth_900_videos"
+    - "/mnt/synology/BWVs/fifth_45_videos"
+    - "/mnt/synology/BWVs/sixth_709_videos"
+    - "/mnt/synology/BWVs/seventh_322_videos"
+    - "/mnt/synology/BWVs/eighth_322_videos"
+    - "/mnt/synology/BWVs/ninth_64_videos"
+
+
+gpus:
+  - cuda:0
+  - cuda:1
+  - cuda:2
+  
+
+threads_per_gpu: 1
+
+phases:
+  - model:
+      base_dir: "VideoLLaMa3_embeddings_364_644_fps1_2k"
+      name: "VL3-SigLIP-NaViT"
+      path: "models/VL3-SigLIP-NaViT"
+      source: "folder"
+      features: ["video_embedding"]

@@ -1,7 +1,7 @@
 video_input:
   batch: first_10_videos
   path: 
-    - "/data2/akommine/CARE_workspace/data/examples/"
+    - "/mnt/synology/BWVs/fifth_45_videos"
 
 gpus:
   - cuda:2
@@ -10,6 +10,7 @@ threads_per_gpu: 1
 
 phases:
   - model:
+      base_dir: "Phi-4-mel"
       name: "Phi-4-mel"
       path: "models/VL3-SigLIP-NaViT"
       source: "folder"
