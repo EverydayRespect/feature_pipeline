@@ -117,7 +117,7 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
             # If first time writing this (video, feature) → open file
             if key not in writers:
                 out_path = getFilePath(vpath, root_dir, feature_type)
-                sink = pa.OSFile(out_path, "wb")
+                sink = pa.OSFile(str(out_path), "wb")
                 schema = pa.schema([
                     (feature_type, pa.list_(pa.float16(), hidden_dim))
                 ])
