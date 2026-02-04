@@ -6,19 +6,20 @@ import pyarrow.ipc as ipc
 from logger import logger
 import torch
 
+from pathlib import Path
+
 def getFilePath(video_path, root_dir, feature_type):
     """
     Generate the output file path for a given video and feature type.
 
-    规则：
-    - If the path contains 'BWVs', then the output path is:
-      root_dir / <first_subdir> / <file_name>.<feature_type>.arrow
+    New rule:
+    - If the path contains 'BWVs', use the *entire* subpath after 'BWVs'
       e.g.
       /mnt/.../BWVs/first_10_videos/session1/a.mp4
-      -> buffer/first_10_videos/a.embedding.arrow
+      -> root_dir/first_10_videos/session1/a.<feature_type>.arrow
 
-    - If the path doesn't contains 'BWVs', then:
-      root_dir / <file_bane>.<feature_type>.arrow
+    - Otherwise:
+      root_dir/<file_name>.<feature_type>.arrow
     """
     video_path = Path(video_path).resolve()
     root_dir = Path(root_dir).resolve()
@@ -28,8 +29,8 @@ def getFilePath(video_path, root_dir, feature_type):
         bwv_idx = parts.index("BWVs")
         if bwv_idx + 1 >= len(parts):
             raise ValueError(f"Path '{video_path}' has 'BWVs' but no subdirectory after it.")
-        first_subdir = parts[bwv_idx + 1]  # e.g. 'first_10_videos'
-        rel_path = Path(first_subdir) / video_path.name
+        
+        rel_path = Path(*parts[bwv_idx + 1:])   # e.g. first_10_videos/session1/a.mp4
     else:
         rel_path = Path(video_path.name)
 
@@ -48,7 +49,6 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
 
     writers = {}     # (video_path, feature_type) -> (sink, writer)
     buffers = {}     # (video_path, feature_type) -> list of Arrow arrays
-    hidden_dims = {} # (video_path, feature_type) -> hidden_dim
 
     while True:
         item = data_queue.get()
@@ -71,17 +71,14 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
             if key not in writers:
                 out_path = getFilePath(vpath, root_dir, feature_type)
                 sink = pa.OSFile(str(out_path), "wb")
-
                 schema = pa.schema(
                     [
                         pa.field("mels", mels_arr.type),
                         pa.field("audio_shape", audio_shape_arr.type),
                     ]
                 )
-
                 writer = ipc.new_file(sink, schema)
                 writers[key] = (sink, writer)
-                hidden_dims[key] = audio_shape
                 logger.info(f"✍️ Opened writer for {vpath}/{feature_type} → {out_path}")
 
             # Build a table with one row
@@ -124,7 +121,6 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
                 writer = ipc.new_file(sink, schema)
                 writers[key] = (sink, writer)
                 buffers[key] = []
-                hidden_dims[key] = hidden_dim
                 logger.info(f"✍️ Opened writer for {vpath}/{feature_type} → {out_path}")
 
             # Add to buffer
@@ -137,8 +133,7 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
                 writers[key][1].write_table(table)
                 t1 = time.time()
                 logger.info(
-                    f"📝 Flushed {len(buffers[key])} batches of frame for {vpath}/{feature_type} "
-                    f"({num_patches}×{hidden_dim}) in {t1 - t0:.3f} sec"
+                    f"📝 Flushed {len(buffers[key])} batches of frame for {vpath}/{feature_type} in {t1 - t0:.3f} sec"
                 )
                 buffers[key] = []
 
@@ -146,25 +141,22 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
             vpath = item["video_path"]
             # flush and close all features for this video
             for (vid, feat), arrs in list(buffers.items()):
-                if vid == vpath:
-                    if arrs:
-                        hidden_dim = hidden_dims[(vid, feat)]
-                        t0 = time.time()
-                        table = pa.table({feat: pa.concat_arrays(arrs)})
-                        writers[(vid, feat)][1].write_table(table)
-                        t1 = time.time()
-                        logger.info(
-                            f"📝 Final flush {len(arrs)} batches of frame for {vpath}/{feat} in {t1 - t0:.3f} sec"
-                        )
-                        buffers[(vid, feat)] = []
+                if vid == vpath and arrs:
+                    t0 = time.time()
+                    table = pa.table({feat: pa.concat_arrays(arrs)})
+                    writers[(vid, feat)][1].write_table(table)
+                    t1 = time.time()
+                    logger.info(
+                        f"📝 Final flush {len(arrs)} batches of frame for {vpath}/{feat} in {t1 - t0:.3f} sec"
+                    )
+                    buffers[(vid, feat)] = []
 
+            for (vid, feat), (sink, writer) in list(writers.items()):
+                if vid == vpath:
                     # Close writer
-                    sink, writer = writers[(vid, feat)]
                     writer.close()
                     sink.close()
                     del writers[(vid, feat)]
-                    del buffers[(vid, feat)]
-                    del hidden_dims[(vid, feat)]
                     logger.info(f"✅ Closed writer for {vpath}/{feat}")
 
     # Cleanup on crash/interrupt

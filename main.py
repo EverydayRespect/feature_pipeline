@@ -25,7 +25,7 @@ def launch_workers_for_phase(conf, phase, video_paths):
     stop_event = mp.Event()
 
     # Start the writer process
-    buffer_root = os.path.join(conf.get("buffer_root", "./buffer"), conf["video_input"].get("batch", "test"))
+    buffer_root = os.path.join(conf.get("buffer_root", "/mnt/14t_drive"), phase["model"]["base_dir"])
     os.makedirs(buffer_root, exist_ok=True)
     writer_proc = mp.Process(
         target=ArrowWriterProcess,
@@ -82,8 +82,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = read_config(args.config_path)
-    video_paths = list_all_videos(conf["video_input"]["path"])
+    if conf["video_input"].get("input_path", None):
+        with open(conf["video_input"].get("input_path", None)) as f:
+            video_paths = [line.strip() for line in f]
+    else:
+        video_paths = list_all_videos(conf["video_input"]["path"])
+    
     logger.info(f"Found {len(video_paths)} videos.")
+    logger.info(video_paths)
 
     # Initialize worker-related variables so they are always defined if an exception occurs early
     task_queue = None

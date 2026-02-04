@@ -128,3 +128,6 @@ with torch.inference_mode():
 diff = (out_15[0] - out_30[0]).abs().max()
 print("Max |Δ| of first patch:", diff.item())
 
+print(out_15[0][:10])
+print(out_30[0][:10])
+

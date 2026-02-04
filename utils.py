@@ -106,7 +106,12 @@ def load_video(
         frames (List[PIL.Image]): List of frames.
         timestamps (List[float]): List of timestamps.
     """
-    probe = ffmpeg.probe(video_path)
+    try:
+        probe = ffmpeg.probe(video_path)
+    except ffmpeg.Error as e:
+        print("STDERR from ffprobe:")
+        print(e.stderr.decode())   # 🔥 打印 ffprobe stderr
+        raise
     duration = float(probe['format']['duration'])
     video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
     w, h = int(video_stream['width']), int(video_stream['height'])
