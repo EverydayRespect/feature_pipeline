@@ -1,0 +1,18 @@
+video_input:
+  batch: sample_embedding_batch
+  input_path: /home/wuchenha/Desktop/feature_pipeline/sampled_video_file_addresses.txt
+
+gpus:
+  - cuda:0
+  - cuda:1
+  - cuda:2
+
+threads_per_gpu: 1
+
+phases:
+  - model:
+      base_dir: "CLIP14_embeddings_fps1"
+      name: "CLIP14"
+      path: "models/CLIP-ViT-L-14/ViT-L-14.pt"
+      source: "folder"
+      features: ["video_embedding"]
