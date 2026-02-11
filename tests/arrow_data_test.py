@@ -4,9 +4,7 @@ import pyarrow as pa
 import pyarrow.ipc as ipc
 
 ROOT_DIRS = [
-    Path("/Volumes/LaCie/VideoLLaMa3_embeddings_240_420_fps1"),
-    Path("/Volumes/LaCie/VideoLLaMa3_embeddings_364_644_fps1"),
-    Path("/Volumes/LaCie/VideoLLaMa3_embeddings_490_854_fps1"),
+    Path("/mnt/14t_drive/VideoLLaMa3_embeddings_240_420_fps1"),
 ]
 
 MAGIC = b"ARROW1"
@@ -49,7 +47,7 @@ def count_embeddings(path: Path):
 
 
 def main():
-    output_file = Path("/Users/johan/Desktop/feature_pipeline_lab/magic_ok_files.txt")
+    output_file = Path("magic_ok_files.txt")
     with open(output_file, "w") as f:
         for root_dir in ROOT_DIRS:
             arrow_files = list(root_dir.rglob("*.arrow")) + list(root_dir.rglob("*.pyarrow"))
