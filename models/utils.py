@@ -1,7 +1,8 @@
 import threading
 from logger import logger
 from models.base import BaseModel
-from models.clip import CLIPExtractor
+from models.clip_base import CLIPExtractor
+from models.clip14 import CLIP14Extractor
 from models.vl3siglip import VL3SigLIPExtractor
 from models.beats import BEATsExtractor
 from models.wavlm import WavLMExtractor
@@ -11,6 +12,7 @@ model_load_lock = threading.Lock()
 
 model_map = {
     "CLIP": CLIPExtractor,
+    "CLIP14": CLIP14Extractor,
     "VL3-SigLIP-NaViT": VL3SigLIPExtractor,
     "BEATs": BEATsExtractor,
     "Phi-4-mel": Phi4MelExtractor,
