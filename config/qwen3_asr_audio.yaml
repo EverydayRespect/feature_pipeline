@@ -1,0 +1,17 @@
+video_input:
+  batch: first_10_videos
+  path: 
+  - "/data2/shihheng/feature_pipeline/feature_pipeline_example/"
+
+gpus:
+  - cuda:1
+
+threads_per_gpu: 1
+
+phases:
+  - model:
+      name: "Qwen3-ASR-0.6B"
+      path: "models/Qwen3-ASR-0.6B"
+      source: "folder"
+      features: ["speech_mels_features"]
+    

@@ -27,6 +27,12 @@ from huggingface_hub import snapshot_download
 #     local_dir_use_symlinks=False
 # )
 
+qwen3_asr_dir = "models/Qwen3-ASR-0.6B"
+snapshot_download(
+    repo_id="Qwen/Qwen3-ASR-0.6B",
+    local_dir=qwen3_asr_dir,
+    local_dir_use_symlinks=False,  # 可省略
+)
 clip14_dir = "models/CLIP-ViT-L-14"
 clip14_url = "https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt"
 def download_clip14(url: str, root: str):
