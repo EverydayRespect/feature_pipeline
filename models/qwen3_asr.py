@@ -6,12 +6,22 @@ import sys
 
 from logger import logger
 from models.base import BaseModel
-
 try:
     from transformers import AutoProcessor
 except ImportError:
     logger.error("Please install transformers: pip install transformers")
     raise
+
+try:
+    from qwen_asr.core.transformers_backend import (
+        Qwen3ASRConfig,
+        Qwen3ASRProcessor,
+    )
+    AutoProcessor.register(Qwen3ASRConfig, Qwen3ASRProcessor)
+except ImportError:
+    logger.error("Please install qwen_asr: pip install -U qwen-asr")
+    raise
+
 
 class Qwen3ASRExtractor(BaseModel):
     def __init__(self, 
@@ -33,7 +43,7 @@ class Qwen3ASRExtractor(BaseModel):
         load_path = os.path.abspath(model_path) if os.path.abspath(model_path) else model_name
         logger.info(f"Loading Qwen3ASR model from {load_path}...")
         
-        self.processor = AutoProcessor.from_pretrained(load_path)
+        self.processor = AutoProcessor.from_pretrained(load_path, fix_mistral_regex=True)
         self.prompt = ['<|im_start|>system\n<|im_end|>\n<|im_start|>user\n<|audio_start|><|audio_pad|><|audio_end|><|im_end|>\n<|im_start|>assistant\n']
     def extract_mels(self, audio, output="mel_features"):
 
@@ -41,9 +51,10 @@ class Qwen3ASRExtractor(BaseModel):
 
         if output == "mel_features":
             
-            outputs = {k: v.cpu().numpy() for k, v in outputs.items()}
-            outputs["audio_shape"] = audio.shape
-            return outputs
+            return {
+                "mels": outputs.input_features.cpu().numpy() ,  # shape [num_patches, hidden_dim]
+                "audio_shape": audio.shape,  # original audio shape
+            }
 
     def load_audio(self, audio_path: str = None,):
         """
@@ -81,7 +92,7 @@ class Qwen3ASRExtractor(BaseModel):
             return [("speech_mels_features", mel_features)]
         
 if __name__ == "__main__":
-    extractor = WavLMExtractor(model_path="./WavLM-Large", device="cuda")
+    extractor = Qwen3ASRExtractor(model_path="models/Qwen3-ASR-0.6B", device="cuda")
     features = extractor.extract_features("audio.wav")
     for feature_name, feature_value in features:
         print(f"{feature_name}: {feature_value['mels'].shape}")
