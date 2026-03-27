@@ -106,7 +106,12 @@ def load_video(
         frames (List[PIL.Image]): List of frames.
         timestamps (List[float]): List of timestamps.
     """
-    probe = ffmpeg.probe(video_path)
+    try:
+        probe = ffmpeg.probe(video_path)
+    except ffmpeg.Error as e:
+        print("STDERR from ffprobe:")
+        print(e.stderr.decode())   # 🔥 打印 ffprobe stderr
+        raise
     duration = float(probe['format']['duration'])
     video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
     w, h = int(video_stream['width']), int(video_stream['height'])
@@ -175,3 +180,80 @@ def load_video(
     frames = [frame for frame in frames]
 
     return frames, timestamps
+
+def load_video_frames(
+    video_path: str,
+    fps: float = 1,
+    start_time: float = None,
+    end_time: float = None,
+    verbose: bool = False,
+):
+    """
+    Load video and return:
+        frames: List[PIL.Image]
+        timestamps: List[float]
+    """
+
+    # -----------------------------------
+    # 1️⃣ Probe video
+    # -----------------------------------
+    probe = ffmpeg.probe(video_path)
+    video_stream = next(
+        s for s in probe["streams"] if s["codec_type"] == "video"
+    )
+
+    w, h = int(video_stream["width"]), int(video_stream["height"])
+    duration = float(probe["format"]["duration"])
+    start_time_video = float(video_stream.get("start_time", 0.0))
+
+    # -----------------------------------
+    # 2️⃣ Trim logic
+    # -----------------------------------
+    input_kwargs = {}
+
+    if start_time is not None:
+        input_kwargs["ss"] = start_time
+
+    if end_time is not None:
+        if start_time is not None:
+            input_kwargs["t"] = end_time - start_time
+        else:
+            input_kwargs["t"] = end_time - start_time_video
+
+    # -----------------------------------
+    # 3️⃣ Decode raw RGB
+    # -----------------------------------
+    stream = (
+        ffmpeg
+        .input(video_path, **input_kwargs)
+        .filter("fps", fps=fps)
+        .output("pipe:", format="rawvideo", pix_fmt="rgb24")
+    )
+
+    out, _ = ffmpeg.run(
+        stream,
+        capture_stdout=True,
+        quiet=not verbose
+    )
+
+    # -----------------------------------
+    # 4️⃣ Convert to numpy (HWC)
+    # -----------------------------------
+    frame_size = w * h * 3
+    num_frames = len(out) // frame_size
+
+    frames_np = (
+        np.frombuffer(out, np.uint8)
+        .reshape(num_frames, h, w, 3)
+    )
+
+    # -----------------------------------
+    # 5️⃣ Convert to PIL
+    # -----------------------------------
+    frames = [
+        Image.fromarray(frame)
+        for frame in frames_np
+    ]
+
+    return frames, _
+

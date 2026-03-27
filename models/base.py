@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from logger import logger
-from utils import load_video
+from utils import load_video, load_video_frames
 import time
 
 class BaseModel:
@@ -26,6 +26,13 @@ class BaseModel:
         
         return frames
     
+    def load_video_frames(self, video_path, fps=1):
+        logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Loading video frames from {video_path} with fps={fps}, start_time={start_time}, end_time={end_time}...")
+        frames, _ = load_video_frames(video_path, fps=fps)
+        logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Loaded {len(frames)} frames from {video_path}.")
+
+        return frames
+    
     @abstractmethod
     def extract_mels(self, data):
         raise NotImplementedError("extract_mels should be overwritten by sub classes")
@@ -39,7 +46,10 @@ class BaseModel:
         raise NotImplementedError("extract_embeddings_pooling should be overridden by subclasses")
 
     def extract_features(self, video_path):
-        video_data = self.load_video(video_path)
+        if self.model_name == 'CLIP14':
+            video_data = self.load_video_frames(video_path)
+        else:
+            video_data = self.load_video(video_path)
 
         if "video_embedding" in self.feature_list:
             logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Extracting video embeddings from {video_path}...")

@@ -1,6 +1,8 @@
 import queue
+import sys
 import time
 import torch
+import traceback
 from logger import logger
 from models.utils import load_model
 
@@ -40,7 +42,7 @@ def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, data_queue, model_conf,
                         feature_value["embeddings"] = embs.to(torch.float32).cpu().numpy()
 
                 data_queue.put(feature_value)
-                
+            
             data_queue.put({
                 "type": "video_done",
                 "video_path": video_path
@@ -48,6 +50,7 @@ def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, data_queue, model_conf,
 
         except Exception as e:
             logger.error(f"[GPU-{gpu_id}-Thread-{gpu_thread_id}] Error processing {video_path}: {e}")
+            traceback.print_exc(file=sys.stderr)
         finally:
             logger.info(f"[GPU-{gpu_id}-Thread-{gpu_thread_id}] Finished {video_path}")
 
