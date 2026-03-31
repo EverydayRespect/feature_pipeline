@@ -96,6 +96,42 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
                 f"📝 Wrote speech mel spectrogram for {vpath}/{feature_type} "
                 f"(shape={mels.shape}, audio_shape={audio_shape})"
             )
+            
+        elif item["type"] == "open_smile_features":
+
+            # Convert to Arrow arrays
+            feature_arrays = {}
+            for k, v in item.items():
+                if k == "audio_shape":
+                    feature_arrays[k] = pa.array([list(item[k])])
+                elif k == "type" or k == "video_path":
+                    continue
+                else:
+                    logger.info(f"Prepared OpenSmile feature '{k}' for {vpath}")
+                    feature_arrays[k] = pa.array([v.tolist()])  # wrap in list for single row
+            # If first time writing this (video, feature) → open file
+            if key not in writers:
+                out_path = getFilePath(vpath, root_dir, feature_type)
+                sink = pa.OSFile(str(out_path), "wb")
+                
+                schema = pa.schema([pa.field(k, arr.type) for k, arr in feature_arrays.items()])
+                writer = ipc.new_file(sink, schema)
+                writers[key] = (sink, writer)
+                logger.info(f"✍️ Opened writer for {vpath}/{feature_type} → {out_path}")
+
+            # Build a table with one row
+            table = pa.table(feature_arrays)
+
+            # Write immediately — no batching
+            writers[key][1].write_table(table)
+
+            logger.info(
+                f"📝 Wrote OpenSmile features  "
+            )
+            for k in feature_arrays.keys():
+                logger.info(
+                    f"📝 Wrote {k} for {vpath}/{feature_type} "
+                )
 
         if item["type"].endswith("_embedding"):
             embs = item["embeddings"]    # shape [num_patches, hidden_dim]
