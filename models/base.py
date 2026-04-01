@@ -26,8 +26,8 @@ class BaseModel:
         
         return frames
     
-    def load_video_frames(self, video_path, fps=1):
-        logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Loading video frames from {video_path} with fps={fps}, start_time={start_time}, end_time={end_time}...")
+    def load_video_frames(self, video_path, fps=2):
+        logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Loading video frames from {video_path} with fps={fps}...")
         frames, _ = load_video_frames(video_path, fps=fps)
         logger.info(f"[GPU-{self.device}-Thread-{self.gpu_thread_id}] Loaded {len(frames)} frames from {video_path}.")
 

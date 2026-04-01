@@ -80,7 +80,7 @@ def load_video(
     video_path: str,
     start_time: Optional[float] = None,
     end_time: Optional[float] = None,
-    fps: Optional[float] = 1,
+    fps: Optional[float] = 2,
     max_frames: Optional[float] = None,
     size: Optional[int] = None,
     size_divisible: int = 1,
@@ -183,7 +183,7 @@ def load_video(
 
 def load_video_frames(
     video_path: str,
-    fps: float = 1,
+    fps: float = 2,
     start_time: float = None,
     end_time: float = None,
     verbose: bool = False,

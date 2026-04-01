@@ -3,7 +3,10 @@ __pycache__/
 *.py[cod]
 
 # Logs
-logs/*.log
+logs/
+
+# Configs
+config/
 
 # Database
 db/milvus/*
@@ -29,6 +32,7 @@ models/*
 
 # environment
 pipeline/
+video_pipeline/
 
 # data
 buffer/

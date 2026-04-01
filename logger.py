@@ -1,7 +1,7 @@
 from loguru import logger
 
 logger.add(
-    "logs/pipeline_{time:YYYY-MM-DD}.log", 
+    "logs/pipeline_{time:YYYY-MM-DD HH:mm:ss}.log", 
     rotation="10 MB", 
     retention="7 days", 
     compression="zip", 

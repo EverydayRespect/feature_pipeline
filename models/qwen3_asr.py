@@ -45,6 +45,7 @@ class Qwen3ASRExtractor(BaseModel):
         
         self.processor = AutoProcessor.from_pretrained(load_path, fix_mistral_regex=True)
         self.prompt = ['<|im_start|>system\n<|im_end|>\n<|im_start|>user\n<|audio_start|><|audio_pad|><|audio_end|><|im_end|>\n<|im_start|>assistant\n']
+    
     def extract_mels(self, audio, output="mel_features"):
 
         outputs = self.processor(text=self.prompt, audio=[audio], return_tensors="pt", padding=True)
