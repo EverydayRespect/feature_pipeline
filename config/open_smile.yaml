@@ -1,0 +1,22 @@
+video_input:
+  batch: first_10_videos
+  path: 
+  - "/data2/shihheng/feature_pipeline/feature_pipeline_example/"
+
+gpus:
+  - cuda:0
+threads_per_gpu: 1
+
+phases:
+  - model:
+      name: "opensmile"
+      path: "opensmile"
+      source: "folder"
+      features: ["open_smile_features"]
+      open_smile_config:
+        feature_set: 
+        - "eGeMAPSv02"
+        - "emobase"
+        feature_levels: 
+        - "LowLevelDescriptors"
+    
