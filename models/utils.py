@@ -8,6 +8,9 @@ from models.beats import BEATsExtractor
 from models.wavlm import WavLMExtractor
 from models.phi4_audio import Phi4MelExtractor
 from models.qwen3_asr import Qwen3ASRExtractor
+from models.open_smile import OpenSmileExtractor
+from models.whisper_80 import Whisper80Extractor
+from models.whisper_128 import Whisper128Extractor
 # Global lock for thread-safe model loading
 model_load_lock = threading.Lock()
 
@@ -19,6 +22,9 @@ model_map = {
     "Phi-4-mel": Phi4MelExtractor,
     "WavLM-Large": WavLMExtractor,
     "Qwen3-ASR-0.6B": Qwen3ASRExtractor,
+    "opensmile": OpenSmileExtractor,
+    "Whisper80": Whisper80Extractor,
+    "Whisper128": Whisper128Extractor,
 }
 
 def load_model(gpu_id, gpu_thread_id, model_conf) -> BaseModel:
