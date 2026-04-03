@@ -30,9 +30,8 @@ class WavLMExtractor(BaseModel):
         
         super().__init__(model_name, model_path, feature_list, device)
         
-        # Use model_path if provided (downloaded local directory), 
-        # otherwise use model_name (Hugging Face model name)
-        load_path = os.path.abspath(model_path) if os.path.abspath(model_path) else model_name
+        # Use local dir only if it exists, otherwise fallback to HF model name
+        load_path = os.path.abspath(model_path) if (model_path and os.path.isdir(model_path)) else model_name
         logger.info(f"Loading WavLM model from {load_path}...")
         
         self.processor = AutoFeatureExtractor.from_pretrained(load_path)
@@ -47,20 +46,38 @@ class WavLMExtractor(BaseModel):
         self.win_length = win_length
         self.dither = dither
         self.padding_value = padding_value
+        self.chunk_length = 30 * self.sampling_rate  # 30 seconds in samples
     
     def extract_mels(self, audio, output="mel_features"):
-        audio = audio[: 120 * self.sampling_rate]
-        inputs = self.processor(
-            audio,
-            sampling_rate=self.sampling_rate,
-            return_tensors="pt",
-        )["input_values"].to(self.device)
-        
-        features = self.feature_extractor(inputs)
+        # 1) chunk audio (keep last short chunk)
+        audio_chunks = []
+        for start in range(0, len(audio), self.chunk_length):
+            end = start + self.chunk_length
+            chunk = audio[start:end]
+            if chunk.shape[0] > 0:
+                audio_chunks.append(chunk)
+
+        if len(audio_chunks) == 0:
+            raise ValueError("Empty audio after chunking.")
+
+        # 2) extract per-chunk features
+        chunk_features = []
+        for chunk in audio_chunks:
+            inputs = self.processor(
+                chunk,
+                sampling_rate=self.sampling_rate,
+                return_tensors="pt",
+            )["input_values"].to(self.device)
+
+            feat = self.feature_extractor(inputs)  # [B, D, T]
+            chunk_features.append(feat.detach().cpu().numpy().squeeze(0))  # [D, T]
+
+        # 3) concat on time axis (last short chunk included)
+        features = np.concatenate(chunk_features, axis=-1)
 
         if output == "mel_features":
             return {
-                "mels": features.detach().cpu().numpy(),
+                "mels": features,
                 "audio_shape": audio.shape
             }
 
