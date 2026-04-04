@@ -1,3 +1,4 @@
+import os
 import queue
 import sys
 import time
@@ -29,7 +30,6 @@ def gpu_worker_thread(gpu_id, gpu_thread_id, task_queue, data_queue, model_conf,
             return
 
         logger.info(f"[GPU-{gpu_id}-Thread-{gpu_thread_id}] Start processing {video_path}...")
-
         try:
             # Iterate over extracted features (frame embeddings)
             for feature_name, feature_value in extractor.extract_features(video_path):

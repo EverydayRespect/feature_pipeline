@@ -107,7 +107,6 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
                 elif k == "type" or k == "video_path":
                     continue
                 else:
-                    logger.info(f"Prepared OpenSmile feature '{k}' for {vpath}")
                     feature_arrays[k] = pa.array([v.tolist()])  # wrap in list for single row
             # If first time writing this (video, feature) → open file
             if key not in writers:
@@ -126,12 +125,8 @@ def ArrowWriterProcess(root_dir, data_queue, stop_event, batch_size=10):
             writers[key][1].write_table(table)
 
             logger.info(
-                f"📝 Wrote OpenSmile features  "
+                f"📝 Wrote OpenSmile features {feature_arrays.keys()} for {vpath}/{feature_type}"
             )
-            for k in feature_arrays.keys():
-                logger.info(
-                    f"📝 Wrote {k} for {vpath}/{feature_type} "
-                )
 
         if item["type"].endswith("_embedding"):
             embs = item["embeddings"]    # shape [num_patches, hidden_dim]

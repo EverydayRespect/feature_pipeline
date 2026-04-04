@@ -86,7 +86,7 @@ if __name__ == "__main__":
         with open(conf["video_input"].get("input_path", None)) as f:
             video_paths = [line.strip() for line in f]
     else:
-        video_paths = list_all_videos(conf["video_input"]["path"])
+        video_paths = list_all_videos(conf["video_input"]["path"], conf['phases'][0])
     
     logger.info(f"Found {len(video_paths)} videos.")
     logger.info(video_paths)

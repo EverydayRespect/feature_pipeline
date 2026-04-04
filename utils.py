@@ -6,6 +6,8 @@ import numpy as np
 from PIL import Image
 from io import BytesIO
 import time
+from file_writer_arrow import getFilePath
+from pathlib import Path
 
 import soundfile as sf 
 import librosa
@@ -13,7 +15,7 @@ from lhotse import Recording, CutSet
 
 MAX_FRAMES = 768
 
-def list_all_videos(input_paths, exts=(".mp4", ".avi", ".mov", ".mkv")):
+def list_all_videos(input_paths, phase_conf, storage_root="/mnt/14t_drive", exts=(".mp4", ".avi", ".mov", ".mkv")):
     """
     Recursively list all video files in a directory.
 
@@ -29,8 +31,13 @@ def list_all_videos(input_paths, exts=(".mp4", ".avi", ".mov", ".mkv")):
         for root, dirs, files in os.walk(input_path):
             for file in files:
                 if file.lower().endswith(exts):
-                    full_path = os.path.join(root, file)
-                    video_paths.append(full_path)
+                    full_path = os.path.abspath(os.path.join(root, file))
+                    buffer_root = os.path.join(storage_root, phase_conf["model"]["base_dir"])
+                    feature_path = getFilePath(full_path, buffer_root, phase_conf['model']['features'][0])
+                    if os.path.exists(feature_path):
+                        continue
+                    else:
+                        video_paths.append(full_path)
     return video_paths
 
 def load_audio(audio_path: str,

@@ -6,7 +6,7 @@ __pycache__/
 logs/
 
 # Configs
-config/
+config/*
 
 # Database
 db/milvus/*

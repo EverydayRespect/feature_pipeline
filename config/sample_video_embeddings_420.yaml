@@ -4,14 +4,12 @@ video_input:
 
 gpus:
   - cuda:0
-  - cuda:1
-  - cuda:2
 
 threads_per_gpu: 1
 
 phases:
   - model:
-      base_dir: "VideoLLaMa3_embeddings_240_420_fps1"
+      base_dir: "VideoLLaMa3_embeddings_240_420_fps2_sample"
       name: "VL3-SigLIP-NaViT"
       path: "models/VL3-SigLIP-NaViT"
       source: "folder"

@@ -1,3 +1,4 @@
+import subprocess
 import numpy as np
 import soundfile as sf
 import librosa 
@@ -85,9 +86,9 @@ class OpenSmileExtractor(BaseModel):
             logger.info(f"Loaded audio {audio_path} with shape {audio.shape} and original SR {sr}.")
         elif audio_path.endswith(".mp4"):
             audio_path_wav = audio_path.replace(".mp4", ".wav")
-            os.system(f"ffmpeg -i {audio_path} -ac 1 -ar 16000 {audio_path_wav}")
+            subprocess.run(["ffmpeg", "-y", "-i", audio_path, "-ac", "1", "-ar", "16000", audio_path_wav], check=True, capture_output=True)
             audio, sr = sf.read(audio_path_wav)
-            os.system(f"rm {audio_path_wav}")
+            os.remove(audio_path_wav)
         audio = audio.astype("float32")
 
         if sr != self.sampling_rate:
